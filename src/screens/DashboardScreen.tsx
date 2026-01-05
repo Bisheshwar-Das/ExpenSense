@@ -129,20 +129,6 @@ export default function DashboardScreen() {
         ))}
       </View>
 
-      {/* Floating Action Button (Add Transaction) */}
-      <TouchableOpacity 
-        className="absolute bottom-6 right-6 w-14 h-14 bg-primary rounded-full items-center justify-center"
-        style={{
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-        }}
-        onPress={() => console.log('Add transaction pressed')}
-      >
-        <Text className="text-white text-3xl font-light">+</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
