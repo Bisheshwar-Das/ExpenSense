@@ -1,40 +1,23 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { Transaction } from '../types';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+//   IMPORT our custom hook
+import { useTransactions } from '../contexts/TransactionContext';
 
 export default function DashboardScreen() {
-  // Mock data - we'll replace with real data later
-  const transactions: Transaction[] = [
-    {
-      id: '1',
-      title: 'Coffee Shop',
-      amount: -4.50,
-      category: 'Food',
-      date: 'Today, 2:30 PM',
-      wallet: 'Main Wallet',
-      type: 'expense'
-    },
-    {
-      id: '2',
-      title: 'Freelance Project',
-      amount: 250.00,
-      category: 'Income',
-      date: 'Today, 10:00 AM',
-      wallet: 'Main Wallet',
-      type: 'income'
-    },
-    {
-      id: '3',
-      title: 'Groceries',
-      amount: -45.80,
-      category: 'Food',
-      date: 'Yesterday, 6:15 PM',
-      wallet: 'Cash',
-      type: 'expense'
-    }
-  ];
+  //   GET transactions from Context
+  const { transactions, isLoading } = useTransactions();
 
-  // Calculate totals from transactions
+  //   Show loading spinner while data loads from AsyncStorage
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-background justify-center items-center">
+        <ActivityIndicator size="large" color="#0891B2" />
+        <Text className="text-textSecondary mt-4">Loading transactions...</Text>
+      </View>
+    );
+  }
+
+  // Calculate totals from REAL transactions
   const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -44,6 +27,38 @@ export default function DashboardScreen() {
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
   const totalBalance = totalIncome - totalExpense;
+
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Check if today
+    if (date.toDateString() === today.toDateString()) {
+      return `Today, ${date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit' 
+      })}`;
+    }
+    
+    // Check if yesterday
+    if (date.toDateString() === yesterday.toDateString()) {
+      return `Yesterday, ${date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit' 
+      })}`;
+    }
+    
+    // Otherwise show date
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <ScrollView className="flex-1 bg-background">
@@ -93,42 +108,54 @@ export default function DashboardScreen() {
           Recent Transactions
         </Text>
 
-        {/* Transaction List */}
-        {transactions.map((transaction) => (
-          <View 
-            key={transaction.id}
-            className="bg-card p-4 rounded-xl mb-3 flex-row justify-between items-center"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 4,
-              elevation: 2,
-            }}
-          >
-            {/* Left Side: Transaction Info */}
-            <View>
-              <Text className="text-textPrimary font-medium text-base mb-1">
-                {transaction.title}
-              </Text>
-              <Text className="text-textSecondary text-xs">
-                {transaction.date}
-              </Text>
-            </View>
-            
-            {/* Right Side: Amount */}
-            <Text 
-              className={`text-base font-semibold ${
-                transaction.type === 'income' ? 'text-income' : 'text-expense'
-              }`}
-            >
-              {transaction.type === 'income' ? '+' : ''}
-              ${Math.abs(transaction.amount).toFixed(2)}
+        {/*   Show message if no transactions */}
+        {transactions.length === 0 ? (
+          <View className="bg-card p-8 rounded-xl items-center">
+            <Text className="text-4xl mb-3">📊</Text>
+            <Text className="text-textPrimary font-medium text-base mb-1">
+              No transactions yet
+            </Text>
+            <Text className="text-textSecondary text-sm text-center">
+              Tap the + button to add your first transaction
             </Text>
           </View>
-        ))}
+        ) : (
+          /*   Transaction List with REAL data */
+          transactions.map((transaction) => (
+            <View 
+              key={transaction.id}
+              className="bg-card p-4 rounded-xl mb-3 flex-row justify-between items-center"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+            >
+              {/* Left Side: Transaction Info */}
+              <View className="flex-1">
+                <Text className="text-textPrimary font-medium text-base mb-1">
+                  {transaction.title}
+                </Text>
+                <Text className="text-textSecondary text-xs">
+                  {formatDate(transaction.date)}
+                </Text>
+              </View>
+              
+              {/* Right Side: Amount */}
+              <Text 
+                className={`text-base font-semibold ${
+                  transaction.type === 'income' ? 'text-income' : 'text-expense'
+                }`}
+              >
+                {transaction.type === 'income' ? '+' : ''}
+                ${Math.abs(transaction.amount).toFixed(2)}
+              </Text>
+            </View>
+          ))
+        )}
       </View>
-
     </ScrollView>
   );
 }
