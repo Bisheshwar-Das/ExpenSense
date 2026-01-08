@@ -27,6 +27,7 @@ export default function AddTransactionScreen() {
   const { addTransaction } = useTransactions();
 
   // Form state
+  const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -37,8 +38,12 @@ export default function AddTransactionScreen() {
   // Get categories based on type
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
-  // Validation
-  const isValid = amount !== '' && parseFloat(amount) > 0 && selectedCategory !== null;
+  // Validation - now requires title too
+  const isValid = 
+    title.trim() !== '' && 
+    amount !== '' && 
+    parseFloat(amount) > 0 && 
+    selectedCategory !== null;
 
   const handleSave = async () => {
     if (!isValid) {
@@ -53,7 +58,7 @@ export default function AddTransactionScreen() {
 
       // Save transaction using Context
       await addTransaction({
-        title: selectedCategory?.name || 'Transaction',
+        title: title.trim(),
         amount: finalAmount,
         type,
         category: selectedCategory?.name || '',
@@ -105,6 +110,23 @@ export default function AddTransactionScreen() {
               className="text-5xl font-bold text-textPrimary"
               style={{ minWidth: 150 }}
               autoFocus
+            />
+          </View>
+        </View>
+
+        {/* Title/Description Input */}
+        <View className="px-6 py-4">
+          <Text className="text-textSecondary text-sm mb-3">
+            Description <Text className="text-expense">*</Text>
+          </Text>
+          <View className="bg-white rounded-2xl p-4">
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="e.g., Lunch at Subway, Monthly salary, etc."
+              placeholderTextColor="#94A3B8"
+              className="text-textPrimary text-base"
+              style={{ minHeight: 44 }}
             />
           </View>
         </View>
@@ -179,8 +201,8 @@ export default function AddTransactionScreen() {
             <TextInput
               value={notes}
               onChangeText={setNotes}
-              placeholder="Add a note..."
-              placeholderTextColor="#64748B"
+              placeholder="Add additional notes..."
+              placeholderTextColor="#94A3B8"
               multiline
               numberOfLines={3}
               className="text-textPrimary text-base"
