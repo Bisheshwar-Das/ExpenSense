@@ -35,6 +35,25 @@ export default function AddTransactionScreen() {
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date());
 
+  // Parse amount for display
+  const getAmountParts = () => {
+    if (!amount) return { dollars: '', cents: '.00', hasDecimal: false };
+    
+    const parts = amount.split('.');
+    const dollars = parts[0];
+    const cents = parts[1];
+    
+    if (cents !== undefined) {
+      // User has typed decimal - pad or truncate to 2 digits
+      const centDisplay = cents.padEnd(3, '0').slice(0, 2);
+      return { dollars, cents: '.' + centDisplay, hasDecimal: true };
+    }
+    
+    return { dollars, cents: '.00', hasDecimal: false };
+  };
+
+  const displayAmount = getAmountParts();
+
   // Get categories based on type
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
@@ -100,17 +119,39 @@ export default function AddTransactionScreen() {
         {/* Amount Input - BIG and centered */}
         <View className="bg-white px-6 py-8 items-center">
           <Text className="text-textSecondary text-sm mb-2">Amount</Text>
-          <View className="flex-row items-center">
-            <Text className="text-4xl text-textSecondary mr-2">$</Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0.00"
-              keyboardType="decimal-pad"
-              className="text-5xl font-bold text-textPrimary"
-              style={{ minWidth: 150 }}
-              autoFocus
-            />
+          <View className="flex-row items-center justify-center">
+            <Text className="text-5xl font-bold text-textSecondary mr-1">$</Text>
+            <View className="flex-row items-baseline">
+              {/* Hidden input - we control display */}
+              <View style={{ position: 'relative' }}>
+                <TextInput
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholder=""
+                  keyboardType="decimal-pad"
+                  className="text-5xl font-bold text-textPrimary"
+                  style={{ 
+                    position: 'absolute',
+                    opacity: 0,
+                    width: 200,
+                  }}
+                  autoFocus
+                />
+                {/* Display text */}
+                <View className="flex-row items-baseline">
+                  <Text className="text-5xl font-bold text-textPrimary">
+                    {displayAmount.dollars || '0'}
+                  </Text>
+                  <Text 
+                    className={`text-5xl font-bold ${
+                      displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'
+                    }`}
+                  >
+                    {displayAmount.cents}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
         </View>
 
