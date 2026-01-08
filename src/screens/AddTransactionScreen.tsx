@@ -1,3 +1,4 @@
+// screens/AddTransactionScreen.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -6,7 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,Alert
+  Platform,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -14,10 +16,11 @@ import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
   Category,
-  Wallet,
 } from '../types';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTransactions } from '../contexts/TransactionContext';
+import CategoryPicker from '../components/CategoryPicker';
+import WalletPicker from '../components/WalletPicker';
+import DatePickerField from '../components/DatePicker';
 
 export default function AddTransactionScreen() {
   const navigation = useNavigation();
@@ -30,7 +33,6 @@ export default function AddTransactionScreen() {
   const [selectedWallet, setSelectedWallet] = useState<string>('Main Wallet');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Get categories based on type
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -49,13 +51,13 @@ export default function AddTransactionScreen() {
       const numericAmount = parseFloat(amount);
       const finalAmount = type === 'expense' ? -numericAmount : numericAmount;
 
-      // ⭐ Save transaction using Context
+      // Save transaction using Context
       await addTransaction({
         title: selectedCategory?.name || 'Transaction',
         amount: finalAmount,
         type,
         category: selectedCategory?.name || '',
-        date: date.toISOString(), // Save as ISO string for consistency
+        date: date.toISOString(),
         wallet: selectedWallet,
         notes,
       });
@@ -149,88 +151,24 @@ export default function AddTransactionScreen() {
           </View>
         </View>
 
-        {/* Category Grid */}
-        <View className="px-6 py-4">
-          <Text className="text-textSecondary text-sm mb-3">Category</Text>
-          <View className="bg-white rounded-2xl p-4">
-            <View className="flex-row flex-wrap gap-3">
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  onPress={() => setSelectedCategory(category)}
-                  className={`items-center justify-center p-4 rounded-2xl ${
-                    selectedCategory?.id === category.id
-                      ? 'bg-primary'
-                      : 'bg-background'
-                  }`}
-                  style={{ width: '30%' }}
-                >
-                  <Text className="text-3xl mb-2">{category.icon}</Text>
-                  <Text
-                    className={`text-xs font-medium ${
-                      selectedCategory?.id === category.id
-                        ? 'text-white'
-                        : 'text-textPrimary'
-                    }`}
-                  >
-                    {category.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
+        {/* Category Picker Component */}
+        <CategoryPicker
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+        />
 
-        {/* Wallet Selector */}
-        <View className="px-6 py-4">
-          <Text className="text-textSecondary text-sm mb-3">Wallet</Text>
-          <TouchableOpacity className="bg-white rounded-2xl p-4 flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <Text className="text-2xl mr-3">👛</Text>
-              <Text className="text-textPrimary font-medium text-base">
-                {selectedWallet}
-              </Text>
-            </View>
-            <Text className="text-textSecondary">›</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Wallet Picker Component */}
+        <WalletPicker
+          selectedWallet={selectedWallet}
+          onSelectWallet={setSelectedWallet}
+        />
 
-        {/* Date Selector */}
-        <View className="px-6 py-4">
-          <Text className="text-textSecondary text-sm mb-3">Date</Text>
-          <TouchableOpacity 
-            className="bg-white rounded-2xl p-4 flex-row items-center justify-between"
-            onPress={() => setShowDatePicker(true)}
-          >
-            <View className="flex-row items-center">
-              <Text className="text-2xl mr-3">📅</Text>
-              <Text className="text-textPrimary font-medium text-base">
-                {date.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </Text>
-            </View>
-            <Text className="text-textSecondary">›</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Date Picker Modal - Shows when showDatePicker is true */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) {
-                setDate(selectedDate);
-              }
-            }}
-          />
-        )}
+        {/* Date Picker Component */}
+        <DatePickerField
+          date={date}
+          onDateChange={setDate}
+        />
 
         {/* Notes */}
         <View className="px-6 py-4">
