@@ -8,7 +8,8 @@ import {
   Pressable,
   ScrollView,
 } from 'react-native';
-import { DEFAULT_WALLETS } from '../types';
+// ⭐ Import the wallet context
+import { useWallets } from '../contexts/WalletContext';
 
 interface WalletPickerProps {
   selectedWallet: string;
@@ -20,13 +21,17 @@ export default function WalletPicker({
   onSelectWallet,
 }: WalletPickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
+  
+  // Get wallets from context instead of DEFAULT_WALLETS
+  const { wallets } = useWallets();
 
   const handleSelect = (walletName: string) => {
     onSelectWallet(walletName);
     setModalVisible(false);
   };
 
-  const selectedWalletData = DEFAULT_WALLETS.find(w => w.name === selectedWallet);
+  // Find selected wallet from the dynamic list
+  const selectedWalletData = wallets.find(w => w.name === selectedWallet);
 
   return (
     <View className="px-6 py-4">
@@ -81,37 +86,51 @@ export default function WalletPicker({
             {/* Wallet List */}
             <ScrollView className="max-h-96">
               <View className="px-6 py-4">
-                {DEFAULT_WALLETS.map((wallet) => (
-                  <TouchableOpacity
-                    key={wallet.id}
-                    onPress={() => handleSelect(wallet.name)}
-                    className={`flex-row items-center p-4 rounded-2xl mb-3 ${
-                      selectedWallet === wallet.name
-                        ? 'bg-primary/10 border-2 border-primary'
-                        : 'bg-background'
-                    }`}
-                  >
-                    {/* Wallet Icon */}
-                    <View
-                      className="w-12 h-12 rounded-xl items-center justify-center mr-3"
-                      style={{ backgroundColor: wallet.color + '20' }}
+                {/* ⭐ Show message if no wallets exist */}
+                {wallets.length === 0 ? (
+                  <View className="py-8 items-center">
+                    <Text className="text-4xl mb-3">👛</Text>
+                    <Text className="text-textPrimary font-medium text-base mb-2">
+                      No wallets yet
+                    </Text>
+                    <Text className="text-textSecondary text-sm text-center">
+                      Go to the Wallets tab to create your first wallet
+                    </Text>
+                  </View>
+                ) : (
+                  /* ⭐ Map through dynamic wallets */
+                  wallets.map((wallet) => (
+                    <TouchableOpacity
+                      key={wallet.id}
+                      onPress={() => handleSelect(wallet.name)}
+                      className={`flex-row items-center p-4 rounded-2xl mb-3 ${
+                        selectedWallet === wallet.name
+                          ? 'bg-primary/10 border-2 border-primary'
+                          : 'bg-background'
+                      }`}
                     >
-                      <Text className="text-2xl">{wallet.icon}</Text>
-                    </View>
+                      {/* Wallet Icon */}
+                      <View
+                        className="w-12 h-12 rounded-xl items-center justify-center mr-3"
+                        style={{ backgroundColor: wallet.color + '20' }}
+                      >
+                        <Text className="text-2xl">{wallet.icon}</Text>
+                      </View>
 
-                    {/* Wallet Info */}
-                    <View className="flex-1">
-                      <Text className="text-textPrimary font-semibold text-base">
-                        {wallet.name}
-                      </Text>
-                    </View>
+                      {/* Wallet Info */}
+                      <View className="flex-1">
+                        <Text className="text-textPrimary font-semibold text-base">
+                          {wallet.name}
+                        </Text>
+                      </View>
 
-                    {/* Checkmark */}
-                    {selectedWallet === wallet.name && (
-                      <Text className="text-primary text-2xl">✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                      {/* Checkmark */}
+                      {selectedWallet === wallet.name && (
+                        <Text className="text-primary text-2xl">✓</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
               </View>
             </ScrollView>
           </Pressable>

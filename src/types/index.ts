@@ -1,4 +1,5 @@
 // src/types/index.ts
+const DEFAULT_CREATED_AT = '2025-01-01T00:00:00.000Z';
 
 export interface Transaction {
   id: string;
@@ -16,6 +17,7 @@ export interface Wallet {
   name: string;
   icon: string;
   color: string;
+  createdAt:string;
 }
 
 export interface Goal {
@@ -57,8 +59,34 @@ export const INCOME_CATEGORIES: Category[] = [
 
 // Default wallets
 export const DEFAULT_WALLETS: Wallet[] = [
-  { id: '1', name: 'Main Wallet', icon: '👛', color: '#0891B2' },
-  { id: '2', name: 'Cash', icon: '💵', color: '#10B981' },
-  { id: '3', name: 'Credit Card', icon: '💳', color: '#F59E0B' },
-  { id: '4', name: 'Savings', icon: '🏦', color: '#8B5CF6' },
+  { id: '1', name: 'Main Wallet', icon: '👛', color: '#0891B2',createdAt: DEFAULT_CREATED_AT },
+  { id: '2', name: 'Cash', icon: '💵', color: '#10B981',createdAt: DEFAULT_CREATED_AT },
+  { id: '3', name: 'Credit Card', icon: '💳', color: '#F59E0B',createdAt: DEFAULT_CREATED_AT },
+  { id: '4', name: 'Savings', icon: '🏦', color: '#8B5CF6',createdAt: DEFAULT_CREATED_AT },
+];
+
+export const WALLET_COLORS = [
+  { name: 'Teal', value: '#0891B2' },
+  { name: 'Green', value: '#10B981' },
+  { name: 'Amber', value: '#F59E0B' },
+  { name: 'Purple', value: '#8B5CF6' },
+  { name: 'Blue', value: '#2563EB' },
+  { name: 'Red', value: '#EF4444' },
+  { name: 'Pink', value: '#EC4899' },
+  { name: 'Indigo', value: '#6366F1' },
+  { name: 'Gray', value: '#64748B' },
+  { name: 'Black', value: '#0F172A' },
+];
+
+export const WALLET_ICONS = [
+  '👛', // Wallet
+  '💵', // Cash
+  '💳', // Credit Card
+  '🏦', // Bank
+  '💰', // Money bag
+  '📱', // Digital wallet
+  '🪙', // Coins
+  '💎', // Premium / Savings
+  '🎯', // Goals
+  '📦', // Other
 ];
