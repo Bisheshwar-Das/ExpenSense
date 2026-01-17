@@ -1,5 +1,5 @@
 // screens/AddTransactionScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   Category,
 } from '../types';
 import { useTransactions } from '../contexts/TransactionContext';
+import { useWallets } from '../contexts/WalletContext';
 import CategoryPicker from '../components/CategoryPicker';
 import WalletPicker from '../components/WalletPicker';
 import DatePickerField from '../components/DatePicker';
@@ -25,15 +26,24 @@ import DatePickerField from '../components/DatePicker';
 export default function AddTransactionScreen() {
   const navigation = useNavigation();
   const { addTransaction } = useTransactions();
+  const { wallets } = useWallets();
 
   // Form state
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<TransactionType>('expense');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedWallet, setSelectedWallet] = useState<string>('Main Wallet');
+  const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date());
+
+  // Set default wallet when wallets are loaded
+  useEffect(() => {
+    if (wallets.length > 0 && !selectedWallet) {
+      // Set the first wallet as default
+      setSelectedWallet(wallets[0].name);
+    }
+  }, [wallets]);
 
   // Parse amount for display
   const getAmountParts = () => {
@@ -57,16 +67,37 @@ export default function AddTransactionScreen() {
   // Get categories based on type
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
-  // Validation - now requires title too
+  // Validation - now requires title and wallet too
   const isValid = 
     title.trim() !== '' && 
     amount !== '' && 
     parseFloat(amount) > 0 && 
-    selectedCategory !== null;
+    selectedCategory !== null &&
+    selectedWallet !== '';
+
+  const resetForm = () => {
+    setTitle('');
+    setAmount('');
+    setType('expense');
+    setSelectedCategory(null);
+    setSelectedWallet(wallets.length > 0 ? wallets[0].name : '');
+    setNotes('');
+    setDate(new Date());
+  };
 
   const handleSave = async () => {
     if (!isValid) {
       Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    // Check if no wallets exist
+    if (wallets.length === 0) {
+      Alert.alert(
+        'No Wallets',
+        'Please create a wallet first in the Wallets screen.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -86,10 +117,26 @@ export default function AddTransactionScreen() {
         notes,
       });
 
-      // Success feedback
-      Alert.alert('Success', 'Transaction saved! ✅', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      // Reset form first
+      resetForm();
+
+      // Success feedback with options
+      Alert.alert(
+        'Success', 
+        'Transaction saved! ✅', 
+        [
+          { 
+            text: 'Add Another', 
+            onPress: () => {
+              // Form is already reset, just stay on screen
+            }
+          },
+          { 
+            text: 'Done', 
+            onPress: () => navigation.goBack() 
+          }
+        ]
+      );
       
     } catch (error) {
       console.error('Error saving transaction:', error);
@@ -221,10 +268,11 @@ export default function AddTransactionScreen() {
           onSelectCategory={setSelectedCategory}
         />
 
-        {/* Wallet Picker Component */}
+        {/* Wallet Picker Component - Now with actual wallets */}
         <WalletPicker
           selectedWallet={selectedWallet}
           onSelectWallet={setSelectedWallet}
+          wallets={wallets}
         />
 
         {/* Date Picker Component */}
