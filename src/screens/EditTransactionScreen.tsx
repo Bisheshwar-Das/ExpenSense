@@ -1,4 +1,4 @@
-// screens/AddTransactionScreen.tsx
+// screens/EditTransactionScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -10,7 +10,7 @@ import {
   Platform,
   Alert
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   TransactionType,
   EXPENSE_CATEGORIES,
@@ -19,14 +19,19 @@ import {
 } from '../types';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
+import { RootNavigationProp, EditTransactionRouteProp } from '../navigation/types';
 import CategoryPicker from '../components/CategoryPicker';
 import WalletPicker from '../components/WalletPicker';
 import DatePickerField from '../components/DatePicker';
 
-export default function AddTransactionScreen() {
-  const navigation = useNavigation();
-  const { addTransaction } = useTransactions();
+export default function EditTransactionScreen() {
+  const navigation = useNavigation<RootNavigationProp>();
+  const route = useRoute<EditTransactionRouteProp>();
+  const { transactions, updateTransaction } = useTransactions();
   const { wallets } = useWallets();
+
+  const { transactionId } = route.params;
+  const transaction = transactions.find(t => t.id === transactionId);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -37,13 +42,30 @@ export default function AddTransactionScreen() {
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date());
 
-  // Set default wallet when wallets are loaded
+  // Pre-fill form with transaction data
   useEffect(() => {
-    if (wallets.length > 0 && !selectedWallet) {
-      // Set the first wallet as default
-      setSelectedWallet(wallets[0].name);
+    if (transaction) {
+      setTitle(transaction.title);
+      setAmount(Math.abs(transaction.amount).toString());
+      setType(transaction.type);
+      setNotes(transaction.notes || '');
+      setSelectedWallet(transaction.wallet);
+      setDate(new Date(transaction.date));
+
+      // Find and set category
+      const categories = transaction.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+      const category = categories.find(c => c.name === transaction.category);
+      setSelectedCategory(category || null);
     }
-  }, [wallets]);
+  }, [transaction]);
+
+  if (!transaction) {
+    return (
+      <View className="flex-1 bg-background justify-center items-center">
+        <Text className="text-textSecondary text-lg">Transaction not found</Text>
+      </View>
+    );
+  }
 
   // Parse amount for display
   const getAmountParts = () => {
@@ -54,7 +76,6 @@ export default function AddTransactionScreen() {
     const cents = parts[1];
     
     if (cents !== undefined) {
-      // User has typed decimal - pad or truncate to 2 digits
       const centDisplay = cents.padEnd(3, '0').slice(0, 2);
       return { dollars, cents: '.' + centDisplay, hasDecimal: true };
     }
@@ -63,11 +84,8 @@ export default function AddTransactionScreen() {
   };
 
   const displayAmount = getAmountParts();
-
-  // Get categories based on type
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
-  // Validation - now requires title and wallet too
   const isValid = 
     title.trim() !== '' && 
     amount !== '' && 
@@ -75,39 +93,17 @@ export default function AddTransactionScreen() {
     selectedCategory !== null &&
     selectedWallet !== '';
 
-  const resetForm = () => {
-    setTitle('');
-    setAmount('');
-    setType('expense');
-    setSelectedCategory(null);
-    setSelectedWallet(wallets.length > 0 ? wallets[0].name : '');
-    setNotes('');
-    setDate(new Date());
-  };
-
   const handleSave = async () => {
     if (!isValid) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    // Check if no wallets exist
-    if (wallets.length === 0) {
-      Alert.alert(
-        'No Wallets',
-        'Please create a wallet first in the Wallets screen.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
     try {
-      // Format the amount based on type
       const numericAmount = parseFloat(amount);
       const finalAmount = type === 'expense' ? -numericAmount : numericAmount;
 
-      // Save transaction using Context
-      await addTransaction({
+      await updateTransaction(transaction.id, {
         title: title.trim(),
         amount: finalAmount,
         type,
@@ -117,30 +113,13 @@ export default function AddTransactionScreen() {
         notes,
       });
 
-      // Reset form first
-      resetForm();
-
-      // Success feedback with options
-      Alert.alert(
-        'Success', 
-        'Transaction saved! ✅', 
-        [
-          { 
-            text: 'Add Another', 
-            onPress: () => {
-              // Form is already reset, just stay on screen
-            }
-          },
-          { 
-            text: 'Done', 
-            onPress: () => navigation.goBack() 
-          }
-        ]
-      );
+      Alert.alert('Success', 'Transaction updated! ✅', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
       
     } catch (error) {
-      console.error('Error saving transaction:', error);
-      Alert.alert('Error', 'Failed to save transaction. Please try again.');
+      console.error('Error updating transaction:', error);
+      Alert.alert('Error', 'Failed to update transaction. Please try again.');
     }
   };
 
@@ -156,20 +135,19 @@ export default function AddTransactionScreen() {
             <Text className="text-primary text-lg">Cancel</Text>
           </TouchableOpacity>
           <Text className="text-textPrimary text-xl font-semibold">
-            Add Transaction
+            Edit Transaction
           </Text>
           <View style={{ width: 60 }} />
         </View>
       </View>
 
       <ScrollView className="flex-1">
-        {/* Amount Input - BIG and centered */}
+        {/* Amount Input */}
         <View className="bg-white px-6 py-8 items-center">
           <Text className="text-textSecondary text-sm mb-2">Amount</Text>
           <View className="flex-row items-center justify-center">
             <Text className="text-5xl font-bold text-textSecondary mr-1">$</Text>
             <View className="flex-row items-baseline">
-              {/* Hidden input - we control display */}
               <View style={{ position: 'relative' }}>
                 <TextInput
                   value={amount}
@@ -184,7 +162,6 @@ export default function AddTransactionScreen() {
                   }}
                   autoFocus
                 />
-                {/* Display text */}
                 <View className="flex-row items-baseline">
                   <Text className="text-5xl font-bold text-textPrimary">
                     {displayAmount.dollars || '0'}
@@ -261,20 +238,17 @@ export default function AddTransactionScreen() {
           </View>
         </View>
 
-        {/* Category Picker Component */}
         <CategoryPicker
           categories={categories}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
         />
 
-        {/* Wallet Picker Component - Gets wallets from context */}
         <WalletPicker
           selectedWallet={selectedWallet}
           onSelectWallet={setSelectedWallet}
         />
 
-        {/* Date Picker Component */}
         <DatePickerField
           date={date}
           onDateChange={setDate}
@@ -299,11 +273,10 @@ export default function AddTransactionScreen() {
           </View>
         </View>
 
-        {/* Spacer for button */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Save Button - Fixed at bottom */}
+      {/* Save Button */}
       <View className="bg-white px-6 py-4 border-t border-border">
         <TouchableOpacity
           onPress={handleSave}
@@ -317,7 +290,7 @@ export default function AddTransactionScreen() {
               isValid ? 'text-white' : 'text-textSecondary'
             }`}
           >
-            Save Transaction
+            Save Changes
           </Text>
         </TouchableOpacity>
       </View>

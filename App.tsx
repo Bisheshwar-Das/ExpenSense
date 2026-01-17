@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+
 import { TransactionProvider } from '@/contexts/TransactionContext';
 import { WalletProvider } from '@/contexts/WalletContext';
 import AppNavigator from '@/navigation/AppNavigator';

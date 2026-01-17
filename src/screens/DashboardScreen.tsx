@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
-//   IMPORT our custom hook
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useTransactions } from '../contexts/TransactionContext';
+import { RootNavigationProp } from '../navigation/types';
 
 export default function DashboardScreen() {
-  //   GET transactions from Context
-  const { transactions, isLoading } = useTransactions();
+  const navigation = useNavigation<RootNavigationProp>();
+  const { transactions, isLoading, deleteTransaction } = useTransactions();
 
-  //   Show loading spinner while data loads from AsyncStorage
   if (isLoading) {
     return (
       <View className="flex-1 bg-background justify-center items-center">
@@ -35,7 +36,6 @@ export default function DashboardScreen() {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // Check if today
     if (date.toDateString() === today.toDateString()) {
       return `Today, ${date.toLocaleTimeString('en-US', { 
         hour: 'numeric', 
@@ -43,7 +43,6 @@ export default function DashboardScreen() {
       })}`;
     }
     
-    // Check if yesterday
     if (date.toDateString() === yesterday.toDateString()) {
       return `Yesterday, ${date.toLocaleTimeString('en-US', { 
         hour: 'numeric', 
@@ -51,7 +50,6 @@ export default function DashboardScreen() {
       })}`;
     }
     
-    // Otherwise show date
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric',
@@ -60,11 +58,50 @@ export default function DashboardScreen() {
     });
   };
 
+  // Handle transaction tap - navigate to details
+  const handleTransactionPress = (transactionId: string) => {
+    navigation.navigate('TransactionDetails', { transactionId });
+  };
+
+  // Handle delete with confirmation
+  const handleDelete = (transactionId: string, title: string) => {
+    Alert.alert(
+      'Delete Transaction',
+      `Are you sure you want to delete "${title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteTransaction(transactionId);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete transaction');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Right swipe action - Delete button
+  const renderRightActions = (transactionId: string, title: string) => {
+    return (
+      <TouchableOpacity
+        onPress={() => handleDelete(transactionId, title)}
+        className="bg-expense justify-center items-center px-6 rounded-xl ml-2"
+      >
+        <Text className="text-white text-2xl">🗑️</Text>
+        <Text className="text-white text-xs font-semibold mt-1">Delete</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <ScrollView className="flex-1 bg-background">
       {/* Header with Teal Background */}
       <View className="bg-primary pt-16 pb-8 px-6 rounded-b-[30px]">
-        {/* App Name */}
         <Text className="text-white text-3xl font-bold mb-1">
           Expen$ense
         </Text>
@@ -108,7 +145,6 @@ export default function DashboardScreen() {
           Recent Transactions
         </Text>
 
-        {/*   Show message if no transactions */}
         {transactions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center">
             <Text className="text-4xl mb-3">📊</Text>
@@ -120,39 +156,44 @@ export default function DashboardScreen() {
             </Text>
           </View>
         ) : (
-          /*   Transaction List with REAL data */
           transactions.map((transaction) => (
-            <View 
+            <Swipeable
               key={transaction.id}
-              className="bg-card p-4 rounded-xl mb-3 flex-row justify-between items-center"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 2,
-              }}
+              renderRightActions={() => renderRightActions(transaction.id, transaction.title)}
+              overshootRight={false}
             >
-              {/* Left Side: Transaction Info */}
-              <View className="flex-1">
-                <Text className="text-textPrimary font-medium text-base mb-1">
-                  {transaction.title}
-                </Text>
-                <Text className="text-textSecondary text-xs">
-                  {formatDate(transaction.date)}
-                </Text>
-              </View>
-              
-              {/* Right Side: Amount */}
-              <Text 
-                className={`text-base font-semibold ${
-                  transaction.type === 'income' ? 'text-income' : 'text-expense'
-                }`}
+              <TouchableOpacity
+                onPress={() => handleTransactionPress(transaction.id)}
+                className="bg-card p-4 rounded-xl mb-3 flex-row justify-between items-center"
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
               >
-                {transaction.type === 'income' ? '+' : ''}
-                ${Math.abs(transaction.amount).toFixed(2)}
-              </Text>
-            </View>
+                {/* Left Side: Transaction Info */}
+                <View className="flex-1">
+                  <Text className="text-textPrimary font-medium text-base mb-1">
+                    {transaction.title}
+                  </Text>
+                  <Text className="text-textSecondary text-xs">
+                    {formatDate(transaction.date)}
+                  </Text>
+                </View>
+                
+                {/* Right Side: Amount */}
+                <Text 
+                  className={`text-base font-semibold ${
+                    transaction.type === 'income' ? 'text-income' : 'text-expense'
+                  }`}
+                >
+                  {transaction.type === 'income' ? '+' : ''}
+                  ${Math.abs(transaction.amount).toFixed(2)}
+                </Text>
+              </TouchableOpacity>
+            </Swipeable>
           ))
         )}
       </View>
