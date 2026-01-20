@@ -1,5 +1,5 @@
 // src/types/index.ts
-const DEFAULT_CREATED_AT = '2025-01-01T00:00:00.000Z';
+export const DEFAULT_CREATED_AT = '2025-01-01T00:00:00.000Z';
 
 export interface Transaction {
   id: string;
@@ -9,7 +9,7 @@ export interface Transaction {
   date: string;
   wallet: string;
   type: 'income' | 'expense';
-  notes?:string; //(optional)
+  notes?: string;
 }
 
 export interface Wallet {
@@ -17,15 +17,7 @@ export interface Wallet {
   name: string;
   icon: string;
   color: string;
-  createdAt:string;
-}
-
-export interface Goal {
-  id: string;
-  name: string;
-  target: number;
-  current: number;
-  color: string;
+  createdAt: string;
 }
 
 export type TransactionType = 'income' | 'expense';
@@ -59,10 +51,10 @@ export const INCOME_CATEGORIES: Category[] = [
 
 // Default wallets
 export const DEFAULT_WALLETS: Wallet[] = [
-  { id: '1', name: 'Main Wallet', icon: '👛', color: '#0891B2',createdAt: DEFAULT_CREATED_AT },
-  { id: '2', name: 'Cash', icon: '💵', color: '#10B981',createdAt: DEFAULT_CREATED_AT },
-  { id: '3', name: 'Credit Card', icon: '💳', color: '#F59E0B',createdAt: DEFAULT_CREATED_AT },
-  { id: '4', name: 'Savings', icon: '🏦', color: '#8B5CF6',createdAt: DEFAULT_CREATED_AT },
+  { id: '1', name: 'Main Wallet', icon: '👛', color: '#0891B2', createdAt: DEFAULT_CREATED_AT },
+  { id: '2', name: 'Cash', icon: '💵', color: '#10B981', createdAt: DEFAULT_CREATED_AT },
+  { id: '3', name: 'Credit Card', icon: '💳', color: '#F59E0B', createdAt: DEFAULT_CREATED_AT },
+  { id: '4', name: 'Savings', icon: '🏦', color: '#8B5CF6', createdAt: DEFAULT_CREATED_AT },
 ];
 
 export const WALLET_COLORS = [
@@ -90,3 +82,48 @@ export const WALLET_ICONS = [
   '🎯', // Goals
   '📦', // Other
 ];
+
+export type GoalType = 'savings' | 'budget';
+
+export interface Goal {
+  id: string;
+  type: GoalType;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  category?: string; // Optional, used for budget goals
+  period?: 'weekly' | 'monthly' | 'yearly'; // Optional, used for budget goals
+  icon: string;
+  color: string;
+  deadline?: string; // Optional, ISO date string
+  createdAt: string;
+}
+
+// Helper type for creating new goals (without id and createdAt)
+export type NewGoal = Omit<Goal, 'id' | 'createdAt'>;
+
+// Example usage:
+// Savings Goal: 
+// { 
+//   type: 'savings', 
+//   name: 'New iPhone', 
+//   targetAmount: 1200, 
+//   currentAmount: 450,
+//   icon: '📱',
+//   color: '#2563EB',
+//   deadline: '2025-12-31T00:00:00.000Z',
+//   createdAt: '2025-01-01T00:00:00.000Z'
+// }
+// 
+// Budget Goal: 
+// { 
+//   type: 'budget', 
+//   name: 'Food Budget', 
+//   targetAmount: 500, 
+//   currentAmount: 0,
+//   category: 'Food', 
+//   period: 'monthly',
+//   icon: '🍔',
+//   color: '#10B981',
+//   createdAt: '2025-01-01T00:00:00.000Z'
+// }
