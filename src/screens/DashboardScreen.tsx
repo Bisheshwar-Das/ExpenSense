@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTransactions } from '../contexts/TransactionContext';
 import { RootNavigationProp } from '../navigation/types';
+import GoalsSummaryWidget from '../components/GoalsSummaryWidget';
 
 export default function DashboardScreen() {
   const navigation = useNavigation<RootNavigationProp>();
@@ -90,7 +91,7 @@ export default function DashboardScreen() {
     return (
       <TouchableOpacity
         onPress={() => handleDelete(transactionId, title)}
-        className="bg-expense justify-center items-center px-6 rounded-xl ml-2"
+        className="bg-expense justify-center items-center px-6 p-4 mb-3  rounded-xl ml-2"
       >
         <Text className="text-white text-2xl">🗑️</Text>
         <Text className="text-white text-xs font-semibold mt-1">Delete</Text>
@@ -101,7 +102,7 @@ export default function DashboardScreen() {
   return (
     <ScrollView className="flex-1 bg-background">
       {/* Header with Teal Background */}
-      <View className="bg-primary pt-16 pb-8 px-6 rounded-b-[30px]">
+      <View className="bg-primary pt-16 pb-6 px-6 mb-3 rounded-b-[30px]">
         <Text className="text-white text-3xl font-bold mb-1">
           Expen$ense
         </Text>
@@ -139,8 +140,11 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      {/* Goals Summary Widget */}
+      <GoalsSummaryWidget />
+
       {/* Recent Transactions Section */}
-      <View className="p-6">
+      <View className="px-6 pb-6">
         <Text className="text-textPrimary text-lg font-semibold mb-4">
           Recent Transactions
         </Text>
