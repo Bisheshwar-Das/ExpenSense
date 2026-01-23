@@ -86,6 +86,17 @@ function TabNavigator() {
         }}
       />
 
+      {/* Reports Tab - Replaces Settings */}
+      <Tab.Screen 
+        name="Reports" 
+        component={ReportsScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart" size={size} color={color} />
+          ),
+        }}
+      />
+
       {/* Goals Tab */}
       <Tab.Screen 
         name="Goals" 
@@ -93,17 +104,6 @@ function TabNavigator() {
         options={{
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="flag" size={size} color={color} />
-          ),
-        }}
-      />
-
-      {/* Settings Tab */}
-      <Tab.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" size={size} color={color} />
           ),
         }}
       />
@@ -136,6 +136,15 @@ export default function AppNavigator() {
           <Stack.Screen 
             name="EditTransaction" 
             component={EditTransactionScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+
+          {/* Settings Screen - Now a modal */}
+          <Stack.Screen 
+            name="Settings" 
+            component={SettingsScreen}
             options={{
               headerShown: false,
             }}

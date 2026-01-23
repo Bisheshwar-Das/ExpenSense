@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { Ionicons } from '@expo/vector-icons';
 import { useTransactions } from '../contexts/TransactionContext';
 import { RootNavigationProp } from '../navigation/types';
 import GoalsSummaryWidget from '../components/GoalsSummaryWidget';
@@ -103,13 +104,25 @@ export default function DashboardScreen() {
     <ScrollView className="flex-1 bg-background">
       {/* Header with Teal Background */}
       <View className="bg-primary pt-16 pb-6 px-6 mb-3 rounded-b-[30px]">
-        <Text className="text-white text-3xl font-bold mb-1">
-          Expen$ense
-        </Text>
-        <Text className="text-white/80 text-sm mb-6">
-          January 2026
-        </Text>
-
+        <View className="flex-row justify-between items-start mb-4">
+          <View>
+            <Text className="text-white text-3xl font-bold mb-1">
+              Expen$ense
+            </Text>
+            <Text className="text-white/80 text-sm">
+              January 2026
+            </Text>
+          </View>
+          
+          {/* Settings Icon */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings')}
+            className="bg-white/20 p-2 rounded-xl"
+          >
+            <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+  
         {/* Total Balance Card */}
         <View className="mb-5">
           <Text className="text-white/80 text-sm mb-1">
@@ -119,7 +132,7 @@ export default function DashboardScreen() {
             ${totalBalance.toFixed(2)}
           </Text>
         </View>
-
+        
         {/* Income and Expense Summary Row */}
         <View className="flex-row gap-3">
           {/* Income Card */}

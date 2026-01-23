@@ -6,14 +6,15 @@ export type RootStackParamList = {
   MainTabs: undefined;
   TransactionDetails: { transactionId: string };
   EditTransaction: { transactionId: string };
+  Settings: undefined; // Add Settings to stack
 };
 
 export type TabParamList = {
   Home: undefined;
   Wallets: undefined;
   Add: undefined;
+  Reports: undefined; 
   Goals: undefined;
-  Settings: undefined;
 };
 
 // Navigation prop types for each screen
