@@ -13,8 +13,8 @@ interface TransactionContextType {
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
 export function TransactionProvider({ children }: { children: React.ReactNode }) {
-  const [transactions, setTransactions] =useState<Transaction[]>([]);
-  const [isLoading,setIsLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   //Key for AsyncStorage - like a filename
   const STORAGE_KEY = '@expensense_transactions';
@@ -28,7 +28,7 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
     try {
       // Get the saved data from phone storage
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
-      
+
       if (savedData) {
         // Parse JSON string back into array
         const parsed = JSON.parse(savedData);
@@ -81,9 +81,7 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
 
   // UPDATE a transaction
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
-    const updatedTransactions = transactions.map(t =>
-      t.id === id ? { ...t, ...updates } : t
-    );
+    const updatedTransactions = transactions.map(t => (t.id === id ? { ...t, ...updates } : t));
     setTransactions(updatedTransactions);
     await saveTransactions(updatedTransactions);
   };
@@ -97,24 +95,18 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
     isLoading,
   };
 
-  return (
-    <TransactionContext.Provider value={value}>
-      {children}
-    </TransactionContext.Provider>
-  );
+  return <TransactionContext.Provider value={value}>{children}</TransactionContext.Provider>;
 }
 
 //Custom Hook for easy access
 // This makes it easier to use the context in components
 export function useTransactions() {
   const context = useContext(TransactionContext);
-  
+
   // Safety check - make sure we're inside the Provider
   if (!context) {
     throw new Error('useTransactions must be used within TransactionProvider');
   }
-  
+
   return context;
-
-
 }

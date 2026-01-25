@@ -46,38 +46,33 @@ function TabNavigator() {
       }}
     >
       {/* Home Tab */}
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={DashboardScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
         }}
       />
 
       {/* Wallets Tab */}
-      <Tab.Screen 
-        name="Wallets" 
+      <Tab.Screen
+        name="Wallets"
         component={WalletsScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="wallet" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="wallet" size={size} color={color} />,
         }}
       />
 
       {/* Center Add Button */}
-      <Tab.Screen 
-        name="Add" 
+      <Tab.Screen
+        name="Add"
         component={AddTransactionScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <View style={styles.centerButtonContainer}>
-              <View style={[
-                styles.centerButton,
-                { backgroundColor: focused ? '#0D9488' : '#14B8A6' }
-              ]}>
+              <View
+                style={[styles.centerButton, { backgroundColor: focused ? '#0D9488' : '#14B8A6' }]}
+              >
                 <Ionicons name="add" size={32} color="#FFFFFF" />
               </View>
             </View>
@@ -87,8 +82,8 @@ function TabNavigator() {
       />
 
       {/* Reports Tab - Replaces Settings */}
-      <Tab.Screen 
-        name="Reports" 
+      <Tab.Screen
+        name="Reports"
         component={ReportsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
@@ -98,13 +93,11 @@ function TabNavigator() {
       />
 
       {/* Goals Tab */}
-      <Tab.Screen 
-        name="Goals" 
+      <Tab.Screen
+        name="Goals"
         component={GoalsScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flag" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Ionicons name="flag" size={size} color={color} />,
         }}
       />
     </Tab.Navigator>
@@ -118,23 +111,19 @@ export default function AppNavigator() {
       <NavigationContainer>
         <Stack.Navigator id="RootStack">
           {/* Main app with tabs */}
-          <Stack.Screen 
-            name="MainTabs" 
-            component={TabNavigator}
-            options={{ headerShown: false }}
-          />
-          
+          <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
+
           {/* Modal/Detail screens (shown on top of tabs) */}
-          <Stack.Screen 
-            name="TransactionDetails" 
+          <Stack.Screen
+            name="TransactionDetails"
             component={TransactionDetailsScreen}
             options={{
               headerShown: false,
             }}
           />
-          
-          <Stack.Screen 
-            name="EditTransaction" 
+
+          <Stack.Screen
+            name="EditTransaction"
             component={EditTransactionScreen}
             options={{
               headerShown: false,
@@ -142,8 +131,8 @@ export default function AppNavigator() {
           />
 
           {/* Settings Screen - Now a modal */}
-          <Stack.Screen 
-            name="Settings" 
+          <Stack.Screen
+            name="Settings"
             component={SettingsScreen}
             options={{
               headerShown: false,

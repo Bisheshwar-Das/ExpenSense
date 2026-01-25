@@ -9,10 +9,10 @@ export default function TransactionDetailsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const route = useRoute<TransactionDetailsRouteProp>();
   const { transactions, deleteTransaction } = useTransactions();
-  
+
   // Get transaction ID from route params
   const { transactionId } = route.params;
-  
+
   // Find the transaction
   const transaction = transactions.find(t => t.id === transactionId);
 
@@ -57,7 +57,7 @@ export default function TransactionDetailsScreen() {
             try {
               await deleteTransaction(transaction.id);
               Alert.alert('Success', 'Transaction deleted', [
-                { text: 'OK', onPress: () => navigation.goBack() }
+                { text: 'OK', onPress: () => navigation.goBack() },
               ]);
             } catch (error) {
               Alert.alert('Error', 'Failed to delete transaction');
@@ -80,9 +80,7 @@ export default function TransactionDetailsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text className="text-primary text-lg">← Back</Text>
           </TouchableOpacity>
-          <Text className="text-textPrimary text-xl font-semibold">
-            Transaction Details
-          </Text>
+          <Text className="text-textPrimary text-xl font-semibold">Transaction Details</Text>
           <View style={{ width: 60 }} />
         </View>
       </View>
@@ -131,9 +129,7 @@ export default function TransactionDetailsScreen() {
           {transaction.notes && (
             <View className="bg-white p-4 rounded-2xl mb-3">
               <Text className="text-textSecondary text-sm mb-2">Notes</Text>
-              <Text className="text-textPrimary text-base leading-6">
-                {transaction.notes}
-              </Text>
+              <Text className="text-textPrimary text-base leading-6">{transaction.notes}</Text>
             </View>
           )}
         </View>
@@ -147,19 +143,12 @@ export default function TransactionDetailsScreen() {
             onPress={handleDelete}
             className="flex-1 py-4 rounded-2xl bg-expense/10 border border-expense/20"
           >
-            <Text className="text-center font-semibold text-lg text-expense">
-              🗑️ Delete
-            </Text>
+            <Text className="text-center font-semibold text-lg text-expense">🗑️ Delete</Text>
           </TouchableOpacity>
 
           {/* Edit Button */}
-          <TouchableOpacity
-            onPress={handleEdit}
-            className="flex-1 py-4 rounded-2xl bg-primary"
-          >
-            <Text className="text-center font-semibold text-lg text-white">
-              ✏️ Edit
-            </Text>
+          <TouchableOpacity onPress={handleEdit} className="flex-1 py-4 rounded-2xl bg-primary">
+            <Text className="text-center font-semibold text-lg text-white">✏️ Edit</Text>
           </TouchableOpacity>
         </View>
       </View>

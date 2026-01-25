@@ -59,7 +59,8 @@ export default function ReportsScreen() {
       amount: categoryTotal,
       percentage: totalExpense > 0 ? (categoryTotal / totalExpense) * 100 : 0,
     };
-  }).filter(cat => cat.amount > 0)
+  })
+    .filter(cat => cat.amount > 0)
     .sort((a, b) => b.amount - a.amount);
 
   // Get daily spending for chart
@@ -90,22 +91,27 @@ export default function ReportsScreen() {
   const maxSpending = Math.max(...dailySpending.map(d => d.amount), 1);
 
   // Color palette for categories
-  const COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+  const COLORS = [
+    '#EF4444',
+    '#F59E0B',
+    '#10B981',
+    '#3B82F6',
+    '#8B5CF6',
+    '#EC4899',
+    '#14B8A6',
+    '#F97316',
+  ];
 
   return (
     <ScrollView className="flex-1 bg-background">
       {/* Header */}
       <View className="bg-primary pt-16 pb-8 px-6 rounded-b-[30px]">
-        <Text className="text-white text-3xl font-bold mb-1">
-          📊 Reports
-        </Text>
-        <Text className="text-white/80 text-sm mb-6">
-          Analyze your spending
-        </Text>
+        <Text className="text-white text-3xl font-bold mb-1">📊 Reports</Text>
+        <Text className="text-white/80 text-sm mb-6">Analyze your spending</Text>
 
         {/* Period Selector */}
         <View className="bg-white/15 p-2 rounded-2xl flex-row gap-2">
-          {(['week', 'month', 'year'] as const).map((period) => (
+          {(['week', 'month', 'year'] as const).map(period => (
             <TouchableOpacity
               key={period}
               onPress={() => setSelectedPeriod(period)}
@@ -130,30 +136,27 @@ export default function ReportsScreen() {
         <View className="flex-row gap-3 mb-6">
           <View className="flex-1 bg-income/10 p-4 rounded-2xl">
             <Text className="text-income/70 text-xs mb-1">Income</Text>
-            <Text className="text-income text-xl font-bold">
-              ${totalIncome.toFixed(0)}
-            </Text>
+            <Text className="text-income text-xl font-bold">${totalIncome.toFixed(0)}</Text>
           </View>
 
           <View className="flex-1 bg-expense/10 p-4 rounded-2xl">
             <Text className="text-expense/70 text-xs mb-1">Expenses</Text>
-            <Text className="text-expense text-xl font-bold">
-              ${totalExpense.toFixed(0)}
-            </Text>
+            <Text className="text-expense text-xl font-bold">${totalExpense.toFixed(0)}</Text>
           </View>
         </View>
 
         {/* Spending Trend Chart */}
-        <View className="bg-card p-5 rounded-2xl mb-6" style={{
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
-          elevation: 2,
-        }}>
-          <Text className="text-textPrimary font-semibold text-base mb-4">
-            Spending Trend
-          </Text>
+        <View
+          className="bg-card p-5 rounded-2xl mb-6"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            elevation: 2,
+          }}
+        >
+          <Text className="text-textPrimary font-semibold text-base mb-4">Spending Trend</Text>
 
           {/* Simple Bar Chart */}
           <View className="flex-row items-end justify-between h-40">
@@ -183,19 +186,25 @@ export default function ReportsScreen() {
           </View>
 
           <Text className="text-textSecondary text-xs text-center mt-3">
-            {selectedPeriod === 'week' ? 'Last 7 days' : 
-             selectedPeriod === 'month' ? 'Last 30 days' : 'Last 12 months'}
+            {selectedPeriod === 'week'
+              ? 'Last 7 days'
+              : selectedPeriod === 'month'
+                ? 'Last 30 days'
+                : 'Last 12 months'}
           </Text>
         </View>
 
         {/* Category Breakdown */}
-        <View className="bg-card p-5 rounded-2xl mb-6" style={{
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
-          elevation: 2,
-        }}>
+        <View
+          className="bg-card p-5 rounded-2xl mb-6"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 4,
+            elevation: 2,
+          }}
+        >
           <Text className="text-textPrimary font-semibold text-base mb-4">
             Spending by Category
           </Text>
@@ -213,9 +222,7 @@ export default function ReportsScreen() {
                   <View className="flex-row justify-between items-center mb-2">
                     <View className="flex-row items-center flex-1">
                       <Text className="text-xl mr-2">{category.icon}</Text>
-                      <Text className="text-textPrimary font-medium text-sm">
-                        {category.name}
-                      </Text>
+                      <Text className="text-textPrimary font-medium text-sm">{category.name}</Text>
                     </View>
                     <Text className="text-textPrimary font-semibold">
                       ${category.amount.toFixed(0)}
@@ -263,23 +270,28 @@ export default function ReportsScreen() {
 
         {/* Insights */}
         {totalExpense > 0 && (
-          <View className="bg-card p-5 rounded-2xl" style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
-            elevation: 2,
-          }}>
-            <Text className="text-textPrimary font-semibold text-base mb-3">
-              💡 Insights
-            </Text>
+          <View
+            className="bg-card p-5 rounded-2xl"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
+          >
+            <Text className="text-textPrimary font-semibold text-base mb-3">💡 Insights</Text>
 
             <View className="space-y-3">
               {/* Average daily spending */}
               <View className="bg-background p-3 rounded-xl">
                 <Text className="text-textSecondary text-xs">Average Daily Spending</Text>
                 <Text className="text-textPrimary text-lg font-bold mt-1">
-                  ${(totalExpense / (selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 365)).toFixed(2)}
+                  $
+                  {(
+                    totalExpense /
+                    (selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 365)
+                  ).toFixed(2)}
                 </Text>
               </View>
 
@@ -288,15 +300,22 @@ export default function ReportsScreen() {
                 <View className="bg-background p-3 rounded-xl">
                   <Text className="text-textSecondary text-xs">Biggest Expense Category</Text>
                   <Text className="text-textPrimary text-lg font-bold mt-1">
-                    {categoryData[0].icon} {categoryData[0].name} (${categoryData[0].amount.toFixed(0)})
+                    {categoryData[0].icon} {categoryData[0].name} ($
+                    {categoryData[0].amount.toFixed(0)})
                   </Text>
                 </View>
               )}
 
               {/* Net savings */}
-              <View className={`p-3 rounded-xl ${totalIncome - totalExpense >= 0 ? 'bg-income/10' : 'bg-expense/10'}`}>
-                <Text className="text-textSecondary text-xs">Net {totalIncome - totalExpense >= 0 ? 'Savings' : 'Loss'}</Text>
-                <Text className={`text-lg font-bold mt-1 ${totalIncome - totalExpense >= 0 ? 'text-income' : 'text-expense'}`}>
+              <View
+                className={`p-3 rounded-xl ${totalIncome - totalExpense >= 0 ? 'bg-income/10' : 'bg-expense/10'}`}
+              >
+                <Text className="text-textSecondary text-xs">
+                  Net {totalIncome - totalExpense >= 0 ? 'Savings' : 'Loss'}
+                </Text>
+                <Text
+                  className={`text-lg font-bold mt-1 ${totalIncome - totalExpense >= 0 ? 'text-income' : 'text-expense'}`}
+                >
                   ${Math.abs(totalIncome - totalExpense).toFixed(2)}
                 </Text>
               </View>

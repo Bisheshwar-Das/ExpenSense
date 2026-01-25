@@ -13,7 +13,7 @@ export type TabParamList = {
   Home: undefined;
   Wallets: undefined;
   Add: undefined;
-  Reports: undefined; 
+  Reports: undefined;
   Goals: undefined;
 };
 

@@ -8,15 +8,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import {
-  TransactionType,
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  Category,
-} from '../types';
+import { TransactionType, EXPENSE_CATEGORIES, INCOME_CATEGORIES, Category } from '../types';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
 import { RootNavigationProp, EditTransactionRouteProp } from '../navigation/types';
@@ -70,26 +65,26 @@ export default function EditTransactionScreen() {
   // Parse amount for display
   const getAmountParts = () => {
     if (!amount) return { dollars: '', cents: '.00', hasDecimal: false };
-    
+
     const parts = amount.split('.');
     const dollars = parts[0];
     const cents = parts[1];
-    
+
     if (cents !== undefined) {
       const centDisplay = cents.padEnd(3, '0').slice(0, 2);
       return { dollars, cents: '.' + centDisplay, hasDecimal: true };
     }
-    
+
     return { dollars, cents: '.00', hasDecimal: false };
   };
 
   const displayAmount = getAmountParts();
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
-  const isValid = 
-    title.trim() !== '' && 
-    amount !== '' && 
-    parseFloat(amount) > 0 && 
+  const isValid =
+    title.trim() !== '' &&
+    amount !== '' &&
+    parseFloat(amount) > 0 &&
     selectedCategory !== null &&
     selectedWallet !== '';
 
@@ -114,9 +109,8 @@ export default function EditTransactionScreen() {
       });
 
       Alert.alert('Success', 'Transaction updated! ✅', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-      
     } catch (error) {
       console.error('Error updating transaction:', error);
       Alert.alert('Error', 'Failed to update transaction. Please try again.');
@@ -134,9 +128,7 @@ export default function EditTransactionScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text className="text-primary text-lg">Cancel</Text>
           </TouchableOpacity>
-          <Text className="text-textPrimary text-xl font-semibold">
-            Edit Transaction
-          </Text>
+          <Text className="text-textPrimary text-xl font-semibold">Edit Transaction</Text>
           <View style={{ width: 60 }} />
         </View>
       </View>
@@ -155,7 +147,7 @@ export default function EditTransactionScreen() {
                   placeholder=""
                   keyboardType="decimal-pad"
                   className="text-5xl font-bold text-textPrimary"
-                  style={{ 
+                  style={{
                     position: 'absolute',
                     opacity: 0,
                     width: 200,
@@ -166,7 +158,7 @@ export default function EditTransactionScreen() {
                   <Text className="text-5xl font-bold text-textPrimary">
                     {displayAmount.dollars || '0'}
                   </Text>
-                  <Text 
+                  <Text
                     className={`text-5xl font-bold ${
                       displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'
                     }`}
@@ -244,21 +236,13 @@ export default function EditTransactionScreen() {
           onSelectCategory={setSelectedCategory}
         />
 
-        <WalletPicker
-          selectedWallet={selectedWallet}
-          onSelectWallet={setSelectedWallet}
-        />
+        <WalletPicker selectedWallet={selectedWallet} onSelectWallet={setSelectedWallet} />
 
-        <DatePickerField
-          date={date}
-          onDateChange={setDate}
-        />
+        <DatePickerField date={date} onDateChange={setDate} />
 
         {/* Notes */}
         <View className="px-6 py-4">
-          <Text className="text-textSecondary text-sm mb-3">
-            Notes (Optional)
-          </Text>
+          <Text className="text-textSecondary text-sm mb-3">Notes (Optional)</Text>
           <View className="bg-white rounded-2xl p-4">
             <TextInput
               value={notes}
@@ -281,9 +265,7 @@ export default function EditTransactionScreen() {
         <TouchableOpacity
           onPress={handleSave}
           disabled={!isValid}
-          className={`py-4 rounded-2xl ${
-            isValid ? 'bg-primary' : 'bg-border'
-          }`}
+          className={`py-4 rounded-2xl ${isValid ? 'bg-primary' : 'bg-border'}`}
         >
           <Text
             className={`text-center font-semibold text-lg ${

@@ -87,9 +87,7 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
             >
               <Text className="text-5xl">{selectedIcon}</Text>
             </View>
-            <Text className="text-textPrimary text-xl font-semibold">
-              {name || 'Wallet Name'}
-            </Text>
+            <Text className="text-textPrimary text-xl font-semibold">{name || 'Wallet Name'}</Text>
           </View>
 
           {/* Wallet Name */}
@@ -112,7 +110,7 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
             <Text className="text-textSecondary text-sm mb-3">Color</Text>
             <View className="bg-white rounded-2xl p-4">
               <View className="flex-row flex-wrap gap-3">
-                {WALLET_COLORS.map((color) => (
+                {WALLET_COLORS.map(color => (
                   <TouchableOpacity
                     key={color.value}
                     onPress={() => setSelectedColor(color.value)}
@@ -127,9 +125,7 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
                         <Text className="text-white text-xl">✓</Text>
                       )}
                     </View>
-                    <Text className="text-textSecondary text-xs mt-1">
-                      {color.name}
-                    </Text>
+                    <Text className="text-textSecondary text-xs mt-1">{color.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -141,7 +137,7 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
             <Text className="text-textSecondary text-sm mb-3">Icon</Text>
             <View className="bg-white rounded-2xl p-4">
               <View className="flex-row flex-wrap gap-3">
-                {WALLET_ICONS.map((icon) => (
+                {WALLET_ICONS.map(icon => (
                   <TouchableOpacity
                     key={icon}
                     onPress={() => setSelectedIcon(icon)}

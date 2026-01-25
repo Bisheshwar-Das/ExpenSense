@@ -8,10 +8,7 @@ interface DatePickerFieldProps {
   onDateChange: (date: Date) => void;
 }
 
-export default function DatePickerField({
-  date,
-  onDateChange,
-}: DatePickerFieldProps) {
+export default function DatePickerField({ date, onDateChange }: DatePickerFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -24,7 +21,7 @@ export default function DatePickerField({
   return (
     <View className="px-6 py-4">
       <Text className="text-textSecondary text-sm mb-3">Date</Text>
-      
+
       <TouchableOpacity
         className="bg-white rounded-2xl p-4 flex-row items-center justify-between"
         onPress={() => setShowPicker(true)}

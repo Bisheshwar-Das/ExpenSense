@@ -1,14 +1,6 @@
 // components/GoalModal.tsx
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  Alert,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, Alert } from 'react-native';
 import { Goal, GoalType, EXPENSE_CATEGORIES } from '../types';
 import { useGoals } from '../contexts/GoalContext';
 
@@ -103,12 +95,7 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-end">
         <View className="bg-white rounded-t-3xl max-h-[90%]">
           {/* Header */}
@@ -175,8 +162,12 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
             ) : (
               <View className="mb-4">
                 <Text className="text-textSecondary text-sm mb-3">Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row -mx-1">
-                  {EXPENSE_CATEGORIES.map((cat) => (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="flex-row -mx-1"
+                >
+                  {EXPENSE_CATEGORIES.map(cat => (
                     <TouchableOpacity
                       key={cat.name}
                       onPress={() => setCategory(cat.name)}
@@ -234,7 +225,7 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
               <View className="mb-4">
                 <Text className="text-textSecondary text-sm mb-3">Period</Text>
                 <View className="bg-background rounded-2xl p-2 flex-row gap-2">
-                  {(['weekly', 'monthly', 'yearly'] as const).map((p) => (
+                  {(['weekly', 'monthly', 'yearly'] as const).map(p => (
                     <TouchableOpacity
                       key={p}
                       onPress={() => setPeriod(p)}
@@ -258,8 +249,12 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
             {/* Icon Picker */}
             <View className="mb-4">
               <Text className="text-textSecondary text-sm mb-3">Icon</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row -mx-1">
-                {GOAL_ICONS.map((icon) => (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="flex-row -mx-1"
+              >
+                {GOAL_ICONS.map(icon => (
                   <TouchableOpacity
                     key={icon}
                     onPress={() => setSelectedIcon(icon)}
@@ -277,16 +272,14 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
             <View className="mb-6">
               <Text className="text-textSecondary text-sm mb-3">Color</Text>
               <View className="flex-row flex-wrap gap-2">
-                {GOAL_COLORS.map((color) => (
+                {GOAL_COLORS.map(color => (
                   <TouchableOpacity
                     key={color}
                     onPress={() => setSelectedColor(color)}
                     className="w-12 h-12 rounded-xl items-center justify-center"
                     style={{ backgroundColor: color }}
                   >
-                    {selectedColor === color && (
-                      <Text className="text-white text-xl">✓</Text>
-                    )}
+                    {selectedColor === color && <Text className="text-white text-xl">✓</Text>}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -295,10 +288,7 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
 
           {/* Save Button */}
           <View className="px-6 py-4 border-t border-border">
-            <TouchableOpacity
-              onPress={handleSave}
-              className="bg-primary py-4 rounded-2xl"
-            >
+            <TouchableOpacity onPress={handleSave} className="bg-primary py-4 rounded-2xl">
               <Text className="text-white text-center font-semibold text-lg">
                 {editGoal ? 'Save Changes' : 'Create Goal'}
               </Text>

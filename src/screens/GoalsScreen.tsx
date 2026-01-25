@@ -9,7 +9,7 @@ import GoalModal from '../components/GoalModal';
 export default function GoalsScreen() {
   const { goals, deleteGoal } = useGoals();
   const { transactions } = useTransactions();
-  
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedTab, setSelectedTab] = useState<'savings' | 'budget'>('savings');
@@ -22,13 +22,9 @@ export default function GoalsScreen() {
   const getBudgetSpending = (category: string) => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    
+
     return transactions
-      .filter(t => 
-        t.type === 'expense' && 
-        t.category === category &&
-        new Date(t.date) >= firstDay
-      )
+      .filter(t => t.type === 'expense' && t.category === category && new Date(t.date) >= firstDay)
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   };
 
@@ -43,18 +39,14 @@ export default function GoalsScreen() {
   };
 
   const handleDeleteGoal = (goal: Goal) => {
-    Alert.alert(
-      'Delete Goal',
-      `Are you sure you want to delete "${goal.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteGoal(goal.id),
-        },
-      ]
-    );
+    Alert.alert('Delete Goal', `Are you sure you want to delete "${goal.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteGoal(goal.id),
+      },
+    ]);
   };
 
   const renderSavingsGoal = (goal: Goal) => {
@@ -85,12 +77,8 @@ export default function GoalsScreen() {
               <Text className="text-2xl">{goal.icon}</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-textPrimary font-semibold text-base">
-                {goal.name}
-              </Text>
-              <Text className="text-textSecondary text-xs">
-                ${remaining.toFixed(0)} remaining
-              </Text>
+              <Text className="text-textPrimary font-semibold text-base">{goal.name}</Text>
+              <Text className="text-textSecondary text-xs">${remaining.toFixed(0)} remaining</Text>
             </View>
           </View>
         </View>
@@ -113,9 +101,7 @@ export default function GoalsScreen() {
           <Text className="text-textSecondary text-sm">
             ${(goal.currentAmount || 0).toFixed(2)} / ${goal.targetAmount.toFixed(2)}
           </Text>
-          <Text className="text-textSecondary text-sm font-medium">
-            {progress.toFixed(0)}%
-          </Text>
+          <Text className="text-textSecondary text-sm font-medium">{progress.toFixed(0)}%</Text>
         </View>
       </TouchableOpacity>
     );
@@ -151,20 +137,14 @@ export default function GoalsScreen() {
               <Text className="text-2xl">{goal.icon}</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-textPrimary font-semibold text-base">
-                {goal.category}
-              </Text>
-              <Text className="text-textSecondary text-xs capitalize">
-                {goal.period} budget
-              </Text>
+              <Text className="text-textPrimary font-semibold text-base">{goal.category}</Text>
+              <Text className="text-textSecondary text-xs capitalize">{goal.period} budget</Text>
             </View>
           </View>
-          
+
           {isOverBudget && (
             <View className="bg-expense/10 px-3 py-1 rounded-full">
-              <Text className="text-expense text-xs font-semibold">
-                Over Budget!
-              </Text>
+              <Text className="text-expense text-xs font-semibold">Over Budget!</Text>
             </View>
           )}
         </View>
@@ -187,11 +167,7 @@ export default function GoalsScreen() {
           <Text className="text-textSecondary text-sm">
             Spent ${spent.toFixed(2)} / ${goal.targetAmount.toFixed(2)}
           </Text>
-          <Text
-            className={`text-sm font-medium ${
-              isOverBudget ? 'text-expense' : 'text-income'
-            }`}
-          >
+          <Text className={`text-sm font-medium ${isOverBudget ? 'text-expense' : 'text-income'}`}>
             {isOverBudget ? '-' : ''}${Math.abs(remaining).toFixed(2)}
           </Text>
         </View>
@@ -204,12 +180,8 @@ export default function GoalsScreen() {
       <ScrollView className="flex-1 bg-background">
         {/* Header */}
         <View className="bg-primary pt-16 pb-8 px-6 rounded-b-[30px]">
-          <Text className="text-white text-3xl font-bold mb-1">
-            🎯 Goals
-          </Text>
-          <Text className="text-white/80 text-sm mb-6">
-            Track savings & budgets
-          </Text>
+          <Text className="text-white text-3xl font-bold mb-1">🎯 Goals</Text>
+          <Text className="text-white/80 text-sm mb-6">Track savings & budgets</Text>
 
           {/* Tab Selector */}
           <View className="bg-white/15 p-2 rounded-2xl flex-row gap-2">
@@ -261,20 +233,16 @@ export default function GoalsScreen() {
             ) : (
               savingsGoals.map(renderSavingsGoal)
             )
+          ) : budgetGoals.length === 0 ? (
+            <View className="bg-card p-8 rounded-xl items-center">
+              <Text className="text-4xl mb-3">📊</Text>
+              <Text className="text-textPrimary font-medium text-base mb-1">No budgets set</Text>
+              <Text className="text-textSecondary text-sm text-center">
+                Create budgets to control your spending
+              </Text>
+            </View>
           ) : (
-            budgetGoals.length === 0 ? (
-              <View className="bg-card p-8 rounded-xl items-center">
-                <Text className="text-4xl mb-3">📊</Text>
-                <Text className="text-textPrimary font-medium text-base mb-1">
-                  No budgets set
-                </Text>
-                <Text className="text-textSecondary text-sm text-center">
-                  Create budgets to control your spending
-                </Text>
-              </View>
-            ) : (
-              budgetGoals.map(renderBudgetGoal)
-            )
+            budgetGoals.map(renderBudgetGoal)
           )}
 
           {/* Add Goal Button */}

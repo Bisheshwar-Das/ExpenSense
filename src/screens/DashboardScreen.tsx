@@ -39,24 +39,24 @@ export default function DashboardScreen() {
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return `Today, ${date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit' 
+      return `Today, ${date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
       })}`;
     }
-    
+
     if (date.toDateString() === yesterday.toDateString()) {
-      return `Yesterday, ${date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit' 
+      return `Yesterday, ${date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
       })}`;
     }
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       hour: 'numeric',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -67,24 +67,20 @@ export default function DashboardScreen() {
 
   // Handle delete with confirmation
   const handleDelete = (transactionId: string, title: string) => {
-    Alert.alert(
-      'Delete Transaction',
-      `Are you sure you want to delete "${title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteTransaction(transactionId);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete transaction');
-            }
-          },
+    Alert.alert('Delete Transaction', `Are you sure you want to delete "${title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteTransaction(transactionId);
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete transaction');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   // Right swipe action - Delete button
@@ -106,14 +102,10 @@ export default function DashboardScreen() {
       <View className="bg-primary pt-16 pb-6 px-6 mb-3 rounded-b-[30px]">
         <View className="flex-row justify-between items-start mb-4">
           <View>
-            <Text className="text-white text-3xl font-bold mb-1">
-              Expen$ense
-            </Text>
-            <Text className="text-white/80 text-sm">
-              January 2026
-            </Text>
+            <Text className="text-white text-3xl font-bold mb-1">Expen$ense</Text>
+            <Text className="text-white/80 text-sm">January 2026</Text>
           </View>
-          
+
           {/* Settings Icon */}
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings')}
@@ -122,33 +114,25 @@ export default function DashboardScreen() {
             <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-  
+
         {/* Total Balance Card */}
         <View className="mb-5">
-          <Text className="text-white/80 text-sm mb-1">
-            Total Balance
-          </Text>
-          <Text className="text-white text-4xl font-bold">
-            ${totalBalance.toFixed(2)}
-          </Text>
+          <Text className="text-white/80 text-sm mb-1">Total Balance</Text>
+          <Text className="text-white text-4xl font-bold">${totalBalance.toFixed(2)}</Text>
         </View>
-        
+
         {/* Income and Expense Summary Row */}
         <View className="flex-row gap-3">
           {/* Income Card */}
           <View className="flex-1 bg-white/15 p-4 rounded-xl">
             <Text className="text-white/80 text-xs mb-1">Income</Text>
-            <Text className="text-white text-lg font-semibold">
-              ${totalIncome.toFixed(2)}
-            </Text>
+            <Text className="text-white text-lg font-semibold">${totalIncome.toFixed(2)}</Text>
           </View>
 
           {/* Expense Card */}
           <View className="flex-1 bg-white/15 p-4 rounded-xl">
             <Text className="text-white/80 text-xs mb-1">Expenses</Text>
-            <Text className="text-white text-lg font-semibold">
-              ${totalExpense.toFixed(2)}
-            </Text>
+            <Text className="text-white text-lg font-semibold">${totalExpense.toFixed(2)}</Text>
           </View>
         </View>
       </View>
@@ -158,22 +142,18 @@ export default function DashboardScreen() {
 
       {/* Recent Transactions Section */}
       <View className="px-6 pb-6">
-        <Text className="text-textPrimary text-lg font-semibold mb-4">
-          Recent Transactions
-        </Text>
+        <Text className="text-textPrimary text-lg font-semibold mb-4">Recent Transactions</Text>
 
         {transactions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center">
             <Text className="text-4xl mb-3">📊</Text>
-            <Text className="text-textPrimary font-medium text-base mb-1">
-              No transactions yet
-            </Text>
+            <Text className="text-textPrimary font-medium text-base mb-1">No transactions yet</Text>
             <Text className="text-textSecondary text-sm text-center">
               Tap the + button to add your first transaction
             </Text>
           </View>
         ) : (
-          transactions.map((transaction) => (
+          transactions.map(transaction => (
             <Swipeable
               key={transaction.id}
               renderRightActions={() => renderRightActions(transaction.id, transaction.title)}
@@ -195,19 +175,17 @@ export default function DashboardScreen() {
                   <Text className="text-textPrimary font-medium text-base mb-1">
                     {transaction.title}
                   </Text>
-                  <Text className="text-textSecondary text-xs">
-                    {formatDate(transaction.date)}
-                  </Text>
+                  <Text className="text-textSecondary text-xs">{formatDate(transaction.date)}</Text>
                 </View>
-                
+
                 {/* Right Side: Amount */}
-                <Text 
+                <Text
                   className={`text-base font-semibold ${
                     transaction.type === 'income' ? 'text-income' : 'text-expense'
                   }`}
                 >
-                  {transaction.type === 'income' ? '+' : ''}
-                  ${Math.abs(transaction.amount).toFixed(2)}
+                  {transaction.type === 'income' ? '+' : ''}$
+                  {Math.abs(transaction.amount).toFixed(2)}
                 </Text>
               </TouchableOpacity>
             </Swipeable>

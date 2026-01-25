@@ -26,7 +26,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const loadWallets = async () => {
     try {
       const stored = await AsyncStorage.getItem(WALLETS_STORAGE_KEY);
-      
+
       if (stored) {
         setWallets(JSON.parse(stored));
       } else {
@@ -58,7 +58,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
     };
-    
+
     await saveWallets([...wallets, newWallet]);
   };
 
@@ -66,7 +66,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const updatedWallets = wallets.map(wallet =>
       wallet.id === id ? { ...wallet, ...updates } : wallet
     );
-    
+
     await saveWallets(updatedWallets);
   };
 

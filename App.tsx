@@ -2,9 +2,8 @@ import 'react-native-gesture-handler';
 
 import { TransactionProvider } from '@/contexts/TransactionContext';
 import { WalletProvider } from '@/contexts/WalletContext';
-import { GoalProvider } from '@/contexts/GoalContext'
+import { GoalProvider } from '@/contexts/GoalContext';
 import AppNavigator from '@/navigation/AppNavigator';
-import DashboardScreen from '@/screens/DashboardScreen';
 import React from 'react';
 
 export default function App() {
@@ -12,7 +11,7 @@ export default function App() {
     <TransactionProvider>
       <WalletProvider>
         <GoalProvider>
-          <AppNavigator/>
+          <AppNavigator />
         </GoalProvider>
       </WalletProvider>
     </TransactionProvider>

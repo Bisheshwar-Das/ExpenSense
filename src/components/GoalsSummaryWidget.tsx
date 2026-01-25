@@ -15,19 +15,15 @@ export default function GoalsSummaryWidget() {
   const getBudgetSpending = (category: string) => {
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    
+
     return transactions
-      .filter(t => 
-        t.type === 'expense' && 
-        t.category === category &&
-        new Date(t.date) >= firstDay
-      )
+      .filter(t => t.type === 'expense' && t.category === category && new Date(t.date) >= firstDay)
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
   };
 
   // Get budget goals
   const budgetGoals = goals.filter(g => g.type === 'budget');
-  
+
   // Find over-budget categories
   const overBudgetGoals = budgetGoals
     .map(goal => ({
@@ -35,7 +31,7 @@ export default function GoalsSummaryWidget() {
       spent: getBudgetSpending(goal.category || ''),
     }))
     .filter(({ goal, spent }) => spent > goal.targetAmount)
-    .sort((a, b) => (b.spent - b.goal.targetAmount) - (a.spent - a.goal.targetAmount));
+    .sort((a, b) => b.spent - b.goal.targetAmount - (a.spent - a.goal.targetAmount));
 
   // Get savings goals sorted by progress
   const savingsGoals = goals
@@ -56,28 +52,29 @@ export default function GoalsSummaryWidget() {
   return (
     <View className="px-6 pb-4">
       <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-textPrimary text-lg font-semibold">
-          🎯 Goals Overview
-        </Text>
+        <Text className="text-textPrimary text-lg font-semibold">🎯 Goals Overview</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
           <Text className="text-primary font-medium text-sm">View All →</Text>
         </TouchableOpacity>
       </View>
 
-      <View className="bg-card rounded-2xl p-4" style={{
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-      }}>
+      <View
+        className="bg-card rounded-2xl p-4"
+        style={{
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
+      >
         {/* Over Budget Alerts */}
         {overBudgetGoals.length > 0 && (
           <View className="mb-3">
             {overBudgetGoals.slice(0, 2).map(({ goal, spent }) => {
               const over = spent - goal.targetAmount;
               return (
-                <View 
+                <View
                   key={goal.id}
                   className="bg-expense/10 p-3 rounded-xl mb-2 flex-row items-center justify-between"
                 >
@@ -87,9 +84,7 @@ export default function GoalsSummaryWidget() {
                       <Text className="text-textPrimary font-medium text-sm">
                         {goal.category} Budget
                       </Text>
-                      <Text className="text-expense text-xs">
-                        ${over.toFixed(0)} over budget
-                      </Text>
+                      <Text className="text-expense text-xs">${over.toFixed(0)} over budget</Text>
                     </View>
                   </View>
                   <Text className="text-expense font-semibold">
@@ -106,7 +101,7 @@ export default function GoalsSummaryWidget() {
           <View className="bg-income/10 p-3 rounded-xl">
             <View className="flex-row items-center justify-between mb-2">
               <View className="flex-row items-center flex-1">
-                <View 
+                <View
                   className="w-8 h-8 rounded-lg items-center justify-center mr-2"
                   style={{ backgroundColor: topSavingsGoal.goal.color + '30' }}
                 >
@@ -122,10 +117,11 @@ export default function GoalsSummaryWidget() {
                 </View>
               </View>
               <Text className="text-income font-semibold text-sm">
-                ${(topSavingsGoal.goal.currentAmount || 0).toFixed(0)}/${topSavingsGoal.goal.targetAmount.toFixed(0)}
+                ${(topSavingsGoal.goal.currentAmount || 0).toFixed(0)}/$
+                {topSavingsGoal.goal.targetAmount.toFixed(0)}
               </Text>
             </View>
-            
+
             {/* Progress Bar */}
             <View className="h-1.5 bg-border rounded-full overflow-hidden">
               <View
@@ -143,7 +139,8 @@ export default function GoalsSummaryWidget() {
         {overBudgetGoals.length === 0 && !topSavingsGoal && (
           <View className="items-center py-2">
             <Text className="text-textSecondary text-sm">
-              {budgetGoals.length} budget{budgetGoals.length !== 1 ? 's' : ''}, {savingsGoals.length} savings goal{savingsGoals.length !== 1 ? 's' : ''}
+              {budgetGoals.length} budget{budgetGoals.length !== 1 ? 's' : ''},{' '}
+              {savingsGoals.length} savings goal{savingsGoals.length !== 1 ? 's' : ''}
             </Text>
           </View>
         )}

@@ -19,23 +19,19 @@ export default function CategoryPicker({
       <Text className="text-textSecondary text-sm mb-3">Category</Text>
       <View className="bg-white rounded-2xl p-4">
         <View className="flex-row flex-wrap gap-3">
-          {categories.map((category) => (
+          {categories.map(category => (
             <TouchableOpacity
               key={category.id}
               onPress={() => onSelectCategory(category)}
               className={`items-center justify-center p-4 rounded-2xl ${
-                selectedCategory?.id === category.id
-                  ? 'bg-primary'
-                  : 'bg-background'
+                selectedCategory?.id === category.id ? 'bg-primary' : 'bg-background'
               }`}
               style={{ width: '30%' }}
             >
               <Text className="text-3xl mb-2">{category.icon}</Text>
               <Text
                 className={`text-xs font-medium ${
-                  selectedCategory?.id === category.id
-                    ? 'text-white'
-                    : 'text-textPrimary'
+                  selectedCategory?.id === category.id ? 'text-white' : 'text-textPrimary'
                 }`}
               >
                 {category.name}

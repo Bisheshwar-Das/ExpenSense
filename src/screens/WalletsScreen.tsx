@@ -8,15 +8,13 @@ import WalletModal from '../components/WalletModal';
 export default function WalletsScreen() {
   const { transactions } = useTransactions();
   const { wallets, addWallet, updateWallet, deleteWallet } = useWallets();
-  
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
 
   // Calculate balance for each wallet
   const getWalletBalance = (walletName: string) => {
-    return transactions
-      .filter(t => t.wallet === walletName)
-      .reduce((sum, t) => sum + t.amount, 0);
+    return transactions.filter(t => t.wallet === walletName).reduce((sum, t) => sum + t.amount, 0);
   };
 
   // Calculate total across all wallets
@@ -34,7 +32,7 @@ export default function WalletsScreen() {
 
   const handleDeleteWallet = (wallet: Wallet) => {
     const transactionCount = transactions.filter(t => t.wallet === wallet.name).length;
-    
+
     if (transactionCount > 0) {
       Alert.alert(
         'Cannot Delete',
@@ -44,18 +42,14 @@ export default function WalletsScreen() {
       return;
     }
 
-    Alert.alert(
-      'Delete Wallet',
-      `Are you sure you want to delete "${wallet.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteWallet(wallet.id),
-        },
-      ]
-    );
+    Alert.alert('Delete Wallet', `Are you sure you want to delete "${wallet.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteWallet(wallet.id),
+      },
+    ]);
   };
 
   const handleSaveWallet = async (walletData: Omit<Wallet, 'id' | 'createdAt'>) => {
@@ -75,35 +69,23 @@ export default function WalletsScreen() {
       <ScrollView className="flex-1 bg-background">
         {/* Header */}
         <View className="bg-primary pt-16 pb-8 px-6 rounded-b-[30px]">
-          <Text className="text-white text-3xl font-bold mb-1">
-            💰 Wallets
-          </Text>
-          <Text className="text-white/80 text-sm mb-6">
-            Manage your accounts
-          </Text>
+          <Text className="text-white text-3xl font-bold mb-1">💰 Wallets</Text>
+          <Text className="text-white/80 text-sm mb-6">Manage your accounts</Text>
 
           {/* Total Balance Card */}
           <View className="bg-white/15 p-5 rounded-2xl">
-            <Text className="text-white/80 text-sm mb-1">
-              Total Balance
-            </Text>
-            <Text className="text-white text-3xl font-bold">
-              ${totalBalance.toFixed(2)}
-            </Text>
+            <Text className="text-white/80 text-sm mb-1">Total Balance</Text>
+            <Text className="text-white text-3xl font-bold">${totalBalance.toFixed(2)}</Text>
           </View>
         </View>
 
         {/* Wallet List */}
         <View className="p-6">
-          <Text className="text-textPrimary text-lg font-semibold mb-4">
-            My Wallets
-          </Text>
+          <Text className="text-textPrimary text-lg font-semibold mb-4">My Wallets</Text>
 
-          {wallets.map((wallet) => {
+          {wallets.map(wallet => {
             const balance = getWalletBalance(wallet.name);
-            const transactionCount = transactions.filter(
-              t => t.wallet === wallet.name
-            ).length;
+            const transactionCount = transactions.filter(t => t.wallet === wallet.name).length;
 
             return (
               <TouchableOpacity
@@ -129,7 +111,7 @@ export default function WalletsScreen() {
                     >
                       <Text className="text-2xl">{wallet.icon}</Text>
                     </View>
-                    
+
                     {/* Wallet Name */}
                     <View>
                       <Text className="text-textPrimary font-semibold text-base">
@@ -147,9 +129,7 @@ export default function WalletsScreen() {
 
                 {/* Balance */}
                 <View className="border-t border-border pt-3">
-                  <Text className="text-textSecondary text-xs mb-1">
-                    Balance
-                  </Text>
+                  <Text className="text-textSecondary text-xs mb-1">Balance</Text>
                   <Text
                     className={`text-2xl font-bold ${
                       balance >= 0 ? 'text-income' : 'text-expense'
@@ -168,12 +148,8 @@ export default function WalletsScreen() {
             onPress={handleAddWallet}
           >
             <Text className="text-4xl mb-2">➕</Text>
-            <Text className="text-textPrimary font-medium text-base">
-              Add New Wallet
-            </Text>
-            <Text className="text-textSecondary text-xs">
-              Create a custom wallet
-            </Text>
+            <Text className="text-textPrimary font-medium text-base">Add New Wallet</Text>
+            <Text className="text-textSecondary text-xs">Create a custom wallet</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

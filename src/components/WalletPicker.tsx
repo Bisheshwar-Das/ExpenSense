@@ -1,13 +1,6 @@
 // components/WalletPicker.tsx
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  Pressable,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 // ⭐ Import the wallet context
 import { useWallets } from '../contexts/WalletContext';
 
@@ -16,12 +9,9 @@ interface WalletPickerProps {
   onSelectWallet: (walletName: string) => void;
 }
 
-export default function WalletPicker({
-  selectedWallet,
-  onSelectWallet,
-}: WalletPickerProps) {
+export default function WalletPicker({ selectedWallet, onSelectWallet }: WalletPickerProps) {
   const [modalVisible, setModalVisible] = useState(false);
-  
+
   // Get wallets from context instead of DEFAULT_WALLETS
   const { wallets } = useWallets();
 
@@ -36,7 +26,7 @@ export default function WalletPicker({
   return (
     <View className="px-6 py-4">
       <Text className="text-textSecondary text-sm mb-3">Wallet</Text>
-      
+
       {/* Wallet Button */}
       <TouchableOpacity
         className="bg-white rounded-2xl p-4 flex-row items-center justify-between"
@@ -49,9 +39,7 @@ export default function WalletPicker({
           >
             <Text className="text-xl">{selectedWalletData?.icon || '👛'}</Text>
           </View>
-          <Text className="text-textPrimary font-medium text-base">
-            {selectedWallet}
-          </Text>
+          <Text className="text-textPrimary font-medium text-base">{selectedWallet}</Text>
         </View>
         <Text className="text-textSecondary">›</Text>
       </TouchableOpacity>
@@ -63,20 +51,15 @@ export default function WalletPicker({
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable
-          className="flex-1 bg-black/50"
-          onPress={() => setModalVisible(false)}
-        >
+        <Pressable className="flex-1 bg-black/50" onPress={() => setModalVisible(false)}>
           <Pressable
             className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl"
-            onPress={(e) => e.stopPropagation()}
+            onPress={e => e.stopPropagation()}
           >
             {/* Modal Header */}
             <View className="px-6 py-4 border-b border-border">
               <View className="flex-row items-center justify-between">
-                <Text className="text-textPrimary text-xl font-semibold">
-                  Select Wallet
-                </Text>
+                <Text className="text-textPrimary text-xl font-semibold">Select Wallet</Text>
                 <TouchableOpacity onPress={() => setModalVisible(false)}>
                   <Text className="text-primary text-lg font-medium">Done</Text>
                 </TouchableOpacity>
@@ -99,7 +82,7 @@ export default function WalletPicker({
                   </View>
                 ) : (
                   /* ⭐ Map through dynamic wallets */
-                  wallets.map((wallet) => (
+                  wallets.map(wallet => (
                     <TouchableOpacity
                       key={wallet.id}
                       onPress={() => handleSelect(wallet.name)}

@@ -103,25 +103,25 @@ export interface Goal {
 export type NewGoal = Omit<Goal, 'id' | 'createdAt'>;
 
 // Example usage:
-// Savings Goal: 
-// { 
-//   type: 'savings', 
-//   name: 'New iPhone', 
-//   targetAmount: 1200, 
+// Savings Goal:
+// {
+//   type: 'savings',
+//   name: 'New iPhone',
+//   targetAmount: 1200,
 //   currentAmount: 450,
 //   icon: '📱',
 //   color: '#2563EB',
 //   deadline: '2025-12-31T00:00:00.000Z',
 //   createdAt: '2025-01-01T00:00:00.000Z'
 // }
-// 
-// Budget Goal: 
-// { 
-//   type: 'budget', 
-//   name: 'Food Budget', 
-//   targetAmount: 500, 
+//
+// Budget Goal:
+// {
+//   type: 'budget',
+//   name: 'Food Budget',
+//   targetAmount: 500,
 //   currentAmount: 0,
-//   category: 'Food', 
+//   category: 'Food',
 //   period: 'monthly',
 //   icon: '🍔',
 //   color: '#10B981',

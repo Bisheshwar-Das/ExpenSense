@@ -26,7 +26,7 @@ export function GoalProvider({ children }: { children: React.ReactNode }) {
   const loadGoals = async () => {
     try {
       const savedData = await AsyncStorage.getItem(STORAGE_KEY);
-      
+
       if (savedData) {
         const parsed = JSON.parse(savedData);
         setGoals(parsed);
@@ -63,9 +63,7 @@ export function GoalProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateGoal = async (id: string, updates: Partial<Goal>) => {
-    const updatedGoals = goals.map(g =>
-      g.id === id ? { ...g, ...updates } : g
-    );
+    const updatedGoals = goals.map(g => (g.id === id ? { ...g, ...updates } : g));
     setGoals(updatedGoals);
     await saveGoals(updatedGoals);
   };
@@ -84,19 +82,15 @@ export function GoalProvider({ children }: { children: React.ReactNode }) {
     isLoading,
   };
 
-  return (
-    <GoalContext.Provider value={value}>
-      {children}
-    </GoalContext.Provider>
-  );
+  return <GoalContext.Provider value={value}>{children}</GoalContext.Provider>;
 }
 
 export function useGoals() {
   const context = useContext(GoalContext);
-  
+
   if (!context) {
     throw new Error('useGoals must be used within GoalProvider');
   }
-  
+
   return context;
 }
