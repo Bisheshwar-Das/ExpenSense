@@ -21,11 +21,17 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.bisheshwar.expensense"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["@react-native-community/datetimepicker"]
+    "plugins": ["@react-native-community/datetimepicker"],
+    "extra": {
+      "eas": {
+        "projectId": "40ca8ba0-68a9-4bf9-8b6d-022d441ff466"
+      }
+    }
   }
 }

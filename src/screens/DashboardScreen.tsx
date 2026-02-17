@@ -20,12 +20,18 @@ export default function DashboardScreen() {
     );
   }
 
-  // Calculate totals from REAL transactions
-  const totalIncome = transactions
+  // Filter to current month only
+  const now = new Date();
+  const currentMonthTransactions = transactions.filter(t => {
+    const tDate = new Date(t.date);
+    return tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
+  });
+
+  const totalIncome = currentMonthTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = transactions
+  const totalExpense = currentMonthTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
@@ -103,7 +109,9 @@ export default function DashboardScreen() {
         <View className="flex-row justify-between items-start mb-4">
           <View>
             <Text className="text-white text-3xl font-bold mb-1">Expen$ense</Text>
-            <Text className="text-white/80 text-sm">January 2026</Text>
+            <Text className="text-white/80 text-md">
+              {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </Text>
           </View>
 
           {/* Settings Icon */}
