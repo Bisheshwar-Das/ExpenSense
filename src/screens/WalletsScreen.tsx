@@ -3,11 +3,13 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
 import { Wallet } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
 import WalletModal from '../components/WalletModal';
 
 export default function WalletsScreen() {
   const { transactions } = useTransactions();
   const { wallets, addWallet, updateWallet, deleteWallet } = useWallets();
+  const { currency } = useSettings();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
@@ -75,7 +77,10 @@ export default function WalletsScreen() {
           {/* Total Balance Card */}
           <View className="bg-white/15 p-5 rounded-2xl">
             <Text className="text-white/80 text-sm mb-1">Total Balance</Text>
-            <Text className="text-white text-3xl font-bold">${totalBalance.toFixed(2)}</Text>
+            <Text className="text-white text-3xl font-bold">
+              {currency.symbol}
+              {totalBalance.toFixed(2)}
+            </Text>
           </View>
         </View>
 
@@ -135,7 +140,9 @@ export default function WalletsScreen() {
                       balance >= 0 ? 'text-income' : 'text-expense'
                     }`}
                   >
-                    {balance >= 0 ? '+' : ''}${balance.toFixed(2)}
+                    {balance >= 0 ? '+' : ''}
+                    {currency.symbol}
+                    {balance.toFixed(2)}
                   </Text>
                 </View>
               </TouchableOpacity>

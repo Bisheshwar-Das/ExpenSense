@@ -8,6 +8,7 @@ type WalletContextType = {
   addWallet: (wallet: Omit<Wallet, 'id' | 'createdAt'>) => Promise<void>;
   updateWallet: (id: string, updates: Partial<Wallet>) => Promise<void>;
   deleteWallet: (id: string) => Promise<void>;
+  clearAllWallets: () => Promise<void>;
 };
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -75,6 +76,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     await saveWallets(filteredWallets);
   };
 
+  const clearAllWallets = async () => {
+    setWallets([]);
+    await AsyncStorage.setItem(WALLETS_STORAGE_KEY, JSON.stringify([]));
+  };
+
   return (
     <WalletContext.Provider
       value={{
@@ -83,6 +89,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         addWallet,
         updateWallet,
         deleteWallet,
+        clearAllWallets,
       }}
     >
       {children}

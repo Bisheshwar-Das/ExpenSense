@@ -3,11 +3,13 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { useTransactions } from '../contexts/TransactionContext';
 import { EXPENSE_CATEGORIES } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function ReportsScreen() {
   const { transactions } = useTransactions();
+  const { currency } = useSettings();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   // Get date range based on selected period
@@ -136,12 +138,18 @@ export default function ReportsScreen() {
         <View className="flex-row gap-3 mb-6">
           <View className="flex-1 bg-income/10 p-4 rounded-2xl">
             <Text className="text-income/70 text-xs mb-1">Income</Text>
-            <Text className="text-income text-xl font-bold">${totalIncome.toFixed(0)}</Text>
+            <Text className="text-income text-xl font-bold">
+              {currency.symbol}
+              {totalIncome.toFixed(0)}
+            </Text>
           </View>
 
           <View className="flex-1 bg-expense/10 p-4 rounded-2xl">
             <Text className="text-expense/70 text-xs mb-1">Expenses</Text>
-            <Text className="text-expense text-xl font-bold">${totalExpense.toFixed(0)}</Text>
+            <Text className="text-expense text-xl font-bold">
+              {currency.symbol}
+              {totalExpense.toFixed(0)}
+            </Text>
           </View>
         </View>
 
@@ -225,7 +233,8 @@ export default function ReportsScreen() {
                       <Text className="text-textPrimary font-medium text-sm">{category.name}</Text>
                     </View>
                     <Text className="text-textPrimary font-semibold">
-                      ${category.amount.toFixed(0)}
+                      {currency.symbol}
+                      {category.amount.toFixed(0)}
                     </Text>
                   </View>
 
@@ -258,7 +267,8 @@ export default function ReportsScreen() {
                       style={{ backgroundColor: COLORS[index] + '20' }}
                     >
                       <Text className="text-textPrimary text-xs font-medium">
-                        {cat.icon} {cat.name}: ${cat.amount.toFixed(0)}
+                        {cat.icon} {cat.name}: {currency.symbol}
+                        {cat.amount.toFixed(0)}
                       </Text>
                     </View>
                   ))}
@@ -287,7 +297,7 @@ export default function ReportsScreen() {
               <View className="bg-background p-3 rounded-xl">
                 <Text className="text-textSecondary text-xs">Average Daily Spending</Text>
                 <Text className="text-textPrimary text-lg font-bold mt-1">
-                  $
+                  {currency.symbol}
                   {(
                     totalExpense /
                     (selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : 365)
@@ -300,7 +310,7 @@ export default function ReportsScreen() {
                 <View className="bg-background p-3 rounded-xl">
                   <Text className="text-textSecondary text-xs">Biggest Expense Category</Text>
                   <Text className="text-textPrimary text-lg font-bold mt-1">
-                    {categoryData[0].icon} {categoryData[0].name} ($
+                    {categoryData[0].icon} {categoryData[0].name} ({currency.symbol}
                     {categoryData[0].amount.toFixed(0)})
                   </Text>
                 </View>
@@ -316,7 +326,8 @@ export default function ReportsScreen() {
                 <Text
                   className={`text-lg font-bold mt-1 ${totalIncome - totalExpense >= 0 ? 'text-income' : 'text-expense'}`}
                 >
-                  ${Math.abs(totalIncome - totalExpense).toFixed(2)}
+                  {currency.symbol}
+                  {Math.abs(totalIncome - totalExpense).toFixed(2)}
                 </Text>
               </View>
             </View>

@@ -4,12 +4,14 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTransactions } from '../contexts/TransactionContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp } from '../navigation/types';
 import { TransactionType } from '../types';
 
 export default function TransactionsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const { transactions, deleteTransaction } = useTransactions();
+  const { currency } = useSettings();
 
   const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
 
@@ -175,7 +177,8 @@ export default function TransactionsScreen() {
                     transaction.type === 'income' ? 'text-income' : 'text-expense'
                   }`}
                 >
-                  {transaction.type === 'income' ? '+' : ''}$
+                  {transaction.type === 'income' ? '+' : ''}
+                  {currency.symbol}
                   {Math.abs(transaction.amount).toFixed(2)}
                 </Text>
               </TouchableOpacity>

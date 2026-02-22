@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { TransactionType, EXPENSE_CATEGORIES, INCOME_CATEGORIES, Category } from '../types';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
+import { useSettings } from '../contexts/SettingsContext';
 import CategoryPicker from '../components/CategoryPicker';
 import WalletPicker from '../components/WalletPicker';
 import DatePickerField from '../components/DatePicker';
@@ -22,6 +23,7 @@ export default function AddTransactionScreen() {
   const navigation = useNavigation();
   const { addTransaction } = useTransactions();
   const { wallets } = useWallets();
+  const { currency } = useSettings();
 
   // Form state
   const [title, setTitle] = useState('');
@@ -153,7 +155,7 @@ export default function AddTransactionScreen() {
         <View className="bg-white px-6 py-8 items-center">
           <Text className="text-textSecondary text-sm mb-2">Amount</Text>
           <View className="flex-row items-center justify-center">
-            <Text className="text-5xl font-bold text-textSecondary mr-1">$</Text>
+            <Text className="text-5xl font-bold text-textSecondary mr-1">{currency.symbol}</Text>
             <View className="flex-row items-baseline">
               {/* Hidden input - we control display */}
               <View style={{ position: 'relative' }}>

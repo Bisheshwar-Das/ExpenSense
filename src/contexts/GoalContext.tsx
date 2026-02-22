@@ -8,6 +8,7 @@ interface GoalContextType {
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt'>) => Promise<void>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+  clearAllGoals: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -74,11 +75,17 @@ export function GoalProvider({ children }: { children: React.ReactNode }) {
     await saveGoals(updatedGoals);
   };
 
+  const clearAllGoals = async () => {
+    setGoals([]);
+    await saveGoals([]);
+  };
+
   const value = {
     goals,
     addGoal,
     updateGoal,
     deleteGoal,
+    clearAllGoals,
     isLoading,
   };
 

@@ -7,6 +7,7 @@ interface TransactionContextType {
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
+  clearAllTransactions: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -86,12 +87,19 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
     await saveTransactions(updatedTransactions);
   };
 
+  // CLEAR ALL transactions
+  const clearAllTransactions = async () => {
+    setTransactions([]);
+    await saveTransactions([]);
+  };
+
   // PROVIDE all data/functions to children
   const value = {
     transactions,
     addTransaction,
     deleteTransaction,
     updateTransaction,
+    clearAllTransactions,
     isLoading,
   };
 

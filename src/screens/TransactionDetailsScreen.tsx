@@ -3,12 +3,14 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTransactions } from '../contexts/TransactionContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp, TransactionDetailsRouteProp } from '../navigation/types';
 
 export default function TransactionDetailsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const route = useRoute<TransactionDetailsRouteProp>();
   const { transactions, deleteTransaction } = useTransactions();
+  const { currency } = useSettings();
 
   // Get transaction ID from route params
   const { transactionId } = route.params;
@@ -94,7 +96,9 @@ export default function TransactionDetailsScreen() {
               transaction.type === 'income' ? 'text-income' : 'text-expense'
             }`}
           >
-            {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+            {transaction.type === 'income' ? '+' : '-'}
+            {currency.symbol}
+            {Math.abs(transaction.amount).toFixed(2)}
           </Text>
           <View
             className={`mt-3 px-4 py-1 rounded-full ${

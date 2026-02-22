@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useGoals } from '../contexts/GoalContext';
 import { useTransactions } from '../contexts/TransactionContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { Goal } from '../types';
 import GoalModal from '../components/GoalModal';
 
 export default function GoalsScreen() {
   const { goals, deleteGoal } = useGoals();
   const { transactions } = useTransactions();
+  const { currency } = useSettings();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -78,7 +80,10 @@ export default function GoalsScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-textPrimary font-semibold text-base">{goal.name}</Text>
-              <Text className="text-textSecondary text-xs">${remaining.toFixed(0)} remaining</Text>
+              <Text className="text-textSecondary text-xs">
+                {currency.symbol}
+                {remaining.toFixed(0)} remaining
+              </Text>
             </View>
           </View>
         </View>
@@ -99,7 +104,9 @@ export default function GoalsScreen() {
         {/* Amount */}
         <View className="flex-row justify-between items-center">
           <Text className="text-textSecondary text-sm">
-            ${(goal.currentAmount || 0).toFixed(2)} / ${goal.targetAmount.toFixed(2)}
+            {currency.symbol}
+            {(goal.currentAmount || 0).toFixed(2)} / {currency.symbol}
+            {goal.targetAmount.toFixed(2)}
           </Text>
           <Text className="text-textSecondary text-sm font-medium">{progress.toFixed(0)}%</Text>
         </View>
@@ -165,10 +172,14 @@ export default function GoalsScreen() {
         {/* Amount */}
         <View className="flex-row justify-between items-center">
           <Text className="text-textSecondary text-sm">
-            Spent ${spent.toFixed(2)} / ${goal.targetAmount.toFixed(2)}
+            Spent {currency.symbol}
+            {spent.toFixed(2)} / {currency.symbol}
+            {goal.targetAmount.toFixed(2)}
           </Text>
           <Text className={`text-sm font-medium ${isOverBudget ? 'text-expense' : 'text-income'}`}>
-            {isOverBudget ? '-' : ''}${Math.abs(remaining).toFixed(2)}
+            {isOverBudget ? '-' : ''}
+            {currency.symbol}
+            {Math.abs(remaining).toFixed(2)}
           </Text>
         </View>
       </TouchableOpacity>

@@ -4,12 +4,14 @@ import { useNavigation } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useTransactions } from '../contexts/TransactionContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp } from '../navigation/types';
 import GoalsSummaryWidget from '../components/GoalsSummaryWidget';
 
 export default function DashboardScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const { transactions, isLoading, deleteTransaction } = useTransactions();
+  const { currency } = useSettings();
 
   if (isLoading) {
     return (
@@ -126,7 +128,10 @@ export default function DashboardScreen() {
         {/* Total Balance Card */}
         <View className="mb-5">
           <Text className="text-white/80 text-sm mb-1">Total Balance</Text>
-          <Text className="text-white text-4xl font-bold">${totalBalance.toFixed(2)}</Text>
+          <Text className="text-white text-4xl font-bold">
+            {currency.symbol}
+            {totalBalance.toFixed(2)}
+          </Text>
         </View>
 
         {/* Income and Expense Summary Row */}
@@ -134,13 +139,19 @@ export default function DashboardScreen() {
           {/* Income Card */}
           <View className="flex-1 bg-white/15 p-4 rounded-xl">
             <Text className="text-white/80 text-xs mb-1">Income</Text>
-            <Text className="text-white text-lg font-semibold">${totalIncome.toFixed(2)}</Text>
+            <Text className="text-white text-lg font-semibold">
+              {currency.symbol}
+              {totalIncome.toFixed(2)}
+            </Text>
           </View>
 
           {/* Expense Card */}
           <View className="flex-1 bg-white/15 p-4 rounded-xl">
             <Text className="text-white/80 text-xs mb-1">Expenses</Text>
-            <Text className="text-white text-lg font-semibold">${totalExpense.toFixed(2)}</Text>
+            <Text className="text-white text-lg font-semibold">
+              {currency.symbol}
+              {totalExpense.toFixed(2)}
+            </Text>
           </View>
         </View>
       </View>
@@ -152,7 +163,7 @@ export default function DashboardScreen() {
       <View className="px-6 pb-6">
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-textPrimary text-lg font-semibold">Recent Transactions</Text>
-          {transactions.length > 0 && (
+          {transactions.length > 10 && (
             <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
               <Text className="text-primary text-sm font-medium">See All</Text>
             </TouchableOpacity>
@@ -199,7 +210,8 @@ export default function DashboardScreen() {
                     transaction.type === 'income' ? 'text-income' : 'text-expense'
                   }`}
                 >
-                  {transaction.type === 'income' ? '+' : ''}$
+                  {transaction.type === 'income' ? '+' : ''}
+                  {currency.symbol}
                   {Math.abs(transaction.amount).toFixed(2)}
                 </Text>
               </TouchableOpacity>
