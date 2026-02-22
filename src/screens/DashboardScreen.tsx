@@ -109,7 +109,7 @@ export default function DashboardScreen() {
         <View className="flex-row justify-between items-start mb-4">
           <View>
             <Text className="text-white text-3xl font-bold mb-1">Expen$ense</Text>
-            <Text className="text-white/80 text-md">
+            <Text className="text-white/80 text-sm">
               {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </Text>
           </View>
@@ -150,7 +150,14 @@ export default function DashboardScreen() {
 
       {/* Recent Transactions Section */}
       <View className="px-6 pb-6">
-        <Text className="text-textPrimary text-lg font-semibold mb-4">Recent Transactions</Text>
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="text-textPrimary text-lg font-semibold">Recent Transactions</Text>
+          {transactions.length > 0 && (
+            <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+              <Text className="text-primary text-sm font-medium">See All</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {transactions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center">
@@ -161,7 +168,7 @@ export default function DashboardScreen() {
             </Text>
           </View>
         ) : (
-          transactions.map(transaction => (
+          transactions.slice(0, 10).map(transaction => (
             <Swipeable
               key={transaction.id}
               renderRightActions={() => renderRightActions(transaction.id, transaction.title)}

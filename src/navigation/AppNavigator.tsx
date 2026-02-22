@@ -15,6 +15,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import AddTransactionScreen from '../screens/AddTransactionScreen';
 import TransactionDetailsScreen from '../screens/TransactionDetailsScreen';
 import EditTransactionScreen from '../screens/EditTransactionScreen';
+import TransactionsScreen from '../screens/TransactionsScreen';
 
 // Import types
 import { RootStackParamList, TabParamList } from './types';
@@ -114,6 +115,14 @@ export default function AppNavigator() {
           <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
 
           {/* Modal/Detail screens (shown on top of tabs) */}
+          <Stack.Screen
+            name="Transactions"
+            component={TransactionsScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+
           <Stack.Screen
             name="TransactionDetails"
             component={TransactionDetailsScreen}
