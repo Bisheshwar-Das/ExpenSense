@@ -19,11 +19,15 @@ import CategoryPicker from '../components/CategoryPicker';
 import WalletPicker from '../components/WalletPicker';
 import DatePickerField from '../components/DatePicker';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function AddTransactionScreen() {
   const navigation = useNavigation();
   const { addTransaction } = useTransactions();
   const { wallets } = useWallets();
   const { currency } = useSettings();
+
+  const insets = useSafeAreaInsets();
 
   // Form state
   const [title, setTitle] = useState('');
@@ -140,10 +144,13 @@ export default function AddTransactionScreen() {
       className="flex-1 bg-background"
     >
       {/* Header */}
-      <View className="bg-white px-6 py-4 border-b border-border">
+      <View
+        className="bg-primary px-6 py-4 border-b border-border"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <View className="flex-row items-center justify-between">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text className="text-primary text-lg">Cancel</Text>
+            <Text className="text-white text-lg">Cancel</Text>
           </TouchableOpacity>
           <Text className="text-textPrimary text-xl font-semibold">Add Transaction</Text>
           <View style={{ width: 60 }} />

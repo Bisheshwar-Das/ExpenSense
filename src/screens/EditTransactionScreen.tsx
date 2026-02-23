@@ -19,6 +19,7 @@ import CategoryPicker from '../components/CategoryPicker';
 import WalletPicker from '../components/WalletPicker';
 import DatePickerField from '../components/DatePicker';
 import { useSettings } from '../contexts/SettingsContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EditTransactionScreen() {
   const navigation = useNavigation<RootNavigationProp>();
@@ -26,6 +27,7 @@ export default function EditTransactionScreen() {
   const { transactions, updateTransaction } = useTransactions();
   const { wallets } = useWallets();
   const { currency } = useSettings();
+  const insets = useSafeAreaInsets();
 
   const { transactionId } = route.params;
   const transaction = transactions.find(t => t.id === transactionId);
@@ -123,6 +125,7 @@ export default function EditTransactionScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-background"
+      style={{ paddingTop: insets.top + 8 }}
     >
       {/* Header */}
       <View className="bg-white px-6 py-4 border-b border-border">

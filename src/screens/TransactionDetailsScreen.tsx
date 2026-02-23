@@ -5,12 +5,14 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp, TransactionDetailsRouteProp } from '../navigation/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TransactionDetailsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const route = useRoute<TransactionDetailsRouteProp>();
   const { transactions, deleteTransaction } = useTransactions();
   const { currency } = useSettings();
+  const insets = useSafeAreaInsets();
 
   // Get transaction ID from route params
   const { transactionId } = route.params;
@@ -77,10 +79,13 @@ export default function TransactionDetailsScreen() {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <View className="bg-white px-6 py-4 border-b border-border">
+      <View
+        className="bg-primary px-6 py-4 border-b border-border"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <View className="flex-row items-center justify-between">
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text className="text-primary text-lg">← Back</Text>
+            <Text className="text-white text-lg">← Back</Text>
           </TouchableOpacity>
           <Text className="text-textPrimary text-xl font-semibold">Transaction Details</Text>
           <View style={{ width: 60 }} />

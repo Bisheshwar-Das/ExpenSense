@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useTransactions } from '../contexts/TransactionContext';
@@ -12,6 +13,7 @@ export default function DashboardScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const { transactions, isLoading, deleteTransaction } = useTransactions();
   const { currency } = useSettings();
+  const insets = useSafeAreaInsets();
 
   if (isLoading) {
     return (
@@ -107,7 +109,10 @@ export default function DashboardScreen() {
   return (
     <ScrollView className="flex-1 bg-background">
       {/* Header with Teal Background */}
-      <View className="bg-primary pt-16 pb-6 px-6 mb-3 rounded-b-[30px]">
+      <View
+        className="bg-primary pb-6 px-6 mb-3 rounded-b-[30px]"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <View className="flex-row justify-between items-start mb-4">
           <View>
             <Text className="text-white text-3xl font-bold mb-1">Expen$ense</Text>
@@ -163,7 +168,7 @@ export default function DashboardScreen() {
       <View className="px-6 pb-6">
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-textPrimary text-lg font-semibold">Recent Transactions</Text>
-          {transactions.length > 10 && (
+          {transactions.length > 0 && (
             <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
               <Text className="text-primary text-sm font-medium">See All</Text>
             </TouchableOpacity>

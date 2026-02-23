@@ -16,6 +16,7 @@ import { useSettings, CURRENCIES, Currency } from '../contexts/SettingsContext';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
 import { useGoals } from '../contexts/GoalContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
@@ -24,6 +25,7 @@ export default function SettingsScreen() {
   const { transactions, clearAllTransactions } = useTransactions();
   const { wallets, clearAllWallets } = useWallets();
   const { goals, clearAllGoals } = useGoals();
+  const insets = useSafeAreaInsets();
 
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
@@ -106,7 +108,10 @@ export default function SettingsScreen() {
     <>
       <ScrollView className="flex-1 bg-background">
         {/* Header */}
-        <View className="bg-primary pt-16 pb-6 px-6 rounded-b-[30px]">
+        <View
+          className="bg-primary pt-16 pb-6 px-6 rounded-b-[30px]"
+          style={{ paddingTop: insets.top + 8 }}
+        >
           <View className="flex-row items-center mb-2">
             <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3">
               <Text className="text-white text-2xl">←</Text>

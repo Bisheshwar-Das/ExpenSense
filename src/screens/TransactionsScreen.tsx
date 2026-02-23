@@ -7,11 +7,13 @@ import { useTransactions } from '../contexts/TransactionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp } from '../navigation/types';
 import { TransactionType } from '../types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TransactionsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const { transactions, deleteTransaction } = useTransactions();
   const { currency } = useSettings();
+  const insets = useSafeAreaInsets();
 
   const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
 
@@ -87,7 +89,10 @@ export default function TransactionsScreen() {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <View className="bg-primary pt-16 pb-6 px-6 rounded-b-[30px]">
+      <View
+        className="bg-primary pt-16 pb-6 px-6 rounded-b-[30px]"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3">
             <Text className="text-white text-2xl">←</Text>
