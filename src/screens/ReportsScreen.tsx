@@ -4,14 +4,13 @@ import { View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-nati
 import { useTransactions } from '../contexts/TransactionContext';
 import { EXPENSE_CATEGORIES } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppHeader from '../components/AppHeader';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function ReportsScreen() {
   const { transactions } = useTransactions();
   const { currency } = useSettings();
-  const insets = useSafeAreaInsets();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   // Get date range based on selected period
@@ -109,13 +108,7 @@ export default function ReportsScreen() {
   return (
     <ScrollView className="flex-1 bg-background">
       {/* Header */}
-      <View
-        className="bg-primary pt-16 pb-8 px-6 rounded-b-[30px]"
-        style={{ paddingTop: insets.top + 8 }}
-      >
-        <Text className="text-white text-3xl font-bold mb-1">📊 Reports</Text>
-        <Text className="text-white/80 text-sm mb-6">Analyze your spending</Text>
-
+      <AppHeader icon="📊" title="Reports" subtitle="Analyze your spending">
         {/* Period Selector */}
         <View className="bg-white/15 p-2 rounded-2xl flex-row gap-2">
           {(['week', 'month', 'year'] as const).map(period => (
@@ -136,7 +129,7 @@ export default function ReportsScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
+      </AppHeader>
 
       <View className="p-6">
         {/* Summary Cards */}

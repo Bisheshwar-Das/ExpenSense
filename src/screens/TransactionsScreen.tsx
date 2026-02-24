@@ -7,13 +7,12 @@ import { useTransactions } from '../contexts/TransactionContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp } from '../navigation/types';
 import { TransactionType } from '../types';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppHeader from '../components/AppHeader';
 
 export default function TransactionsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const { transactions, deleteTransaction } = useTransactions();
   const { currency } = useSettings();
-  const insets = useSafeAreaInsets();
 
   const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
 
@@ -89,17 +88,10 @@ export default function TransactionsScreen() {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <View
-        className="bg-primary pt-16 pb-6 px-6 rounded-b-[30px]"
-        style={{ paddingTop: insets.top + 8 }}
+      <AppHeader
+        title="All Transactions"
+        subtitle={`${filteredTransactions.length} ${filteredTransactions.length === 1 ? 'transaction' : 'transactions'}`}
       >
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3">
-            <Text className="text-white text-2xl">←</Text>
-          </TouchableOpacity>
-          <Text className="text-white text-3xl font-bold">All Transactions</Text>
-        </View>
-
         {/* Filter Tabs */}
         <View className="bg-white/15 p-2 rounded-2xl flex-row gap-2">
           {(['all', 'income', 'expense'] as const).map(type => (
@@ -120,18 +112,10 @@ export default function TransactionsScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
-
-      {/* Transaction Count */}
-      <View className="px-6 py-3">
-        <Text className="text-textSecondary text-sm">
-          {filteredTransactions.length}{' '}
-          {filteredTransactions.length === 1 ? 'transaction' : 'transactions'}
-        </Text>
-      </View>
+      </AppHeader>
 
       {/* Transactions List */}
-      <ScrollView className="flex-1 px-6">
+      <ScrollView className="flex-1 pt-8 px-6">
         {filteredTransactions.length === 0 ? (
           <View className="bg-card p-8 rounded-xl items-center mt-4">
             <Text className="text-4xl mb-3">📊</Text>

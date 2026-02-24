@@ -6,6 +6,7 @@ import { Wallet } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import WalletModal from '../components/WalletModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppHeader from '@/components/AppHeader';
 
 export default function WalletsScreen() {
   const { transactions } = useTransactions();
@@ -72,13 +73,7 @@ export default function WalletsScreen() {
     <>
       <ScrollView className="flex-1 bg-background">
         {/* Header */}
-        <View
-          className="bg-primary pt-16 pb-8 px-6 rounded-b-[30px]"
-          style={{ paddingTop: insets.top + 8 }}
-        >
-          <Text className="text-white text-3xl font-bold mb-1">💰 Wallets</Text>
-          <Text className="text-white/80 text-sm mb-6">Manage your accounts</Text>
-
+        <AppHeader icon="💰" title="Wallets" subtitle="Manage your accounts">
           {/* Total Balance Card */}
           <View className="bg-white/15 p-5 rounded-2xl">
             <Text className="text-white/80 text-sm mb-1">Total Balance</Text>
@@ -87,7 +82,7 @@ export default function WalletsScreen() {
               {totalBalance.toFixed(2)}
             </Text>
           </View>
-        </View>
+        </AppHeader>
 
         {/* Wallet List */}
         <View className="p-6">

@@ -7,8 +7,13 @@ import { useSettings } from '../contexts/SettingsContext';
 import { Goal } from '../types';
 import GoalModal from '../components/GoalModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { RootNavigationProp } from '../navigation/types';
+import { useNavigation } from '@react-navigation/native';
+import AppHeader from '@/components/AppHeader';
 
 export default function GoalsScreen() {
+  const navigation = useNavigation<RootNavigationProp>();
   const { goals, deleteGoal } = useGoals();
   const { transactions } = useTransactions();
   const { currency } = useSettings();
@@ -192,13 +197,7 @@ export default function GoalsScreen() {
     <>
       <ScrollView className="flex-1 bg-background">
         {/* Header */}
-        <View
-          className="bg-primary pb-8 px-6 rounded-b-[30px]"
-          style={{ paddingTop: insets.top + 8 }}
-        >
-          <Text className="text-white text-3xl font-bold mb-1">🎯 Goals</Text>
-          <Text className="text-white/80 text-sm mb-6">Track savings & budgets</Text>
-
+        <AppHeader icon="🎯" title="Goals" subtitle="Track savings & budgets">
           {/* Tab Selector */}
           <View className="bg-white/15 p-2 rounded-2xl flex-row gap-2">
             <TouchableOpacity
@@ -231,7 +230,7 @@ export default function GoalsScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </AppHeader>
 
         {/* Goals List */}
         <View className="p-6">
