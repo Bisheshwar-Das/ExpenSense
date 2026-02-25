@@ -1,5 +1,4 @@
-// screens/EditTransactionScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // add useRef
 import {
   View,
   Text,
@@ -29,6 +28,8 @@ export default function EditTransactionScreen() {
   const { currency } = useSettings();
   const insets = useSafeAreaInsets();
 
+  const amountInputRef = useRef<TextInput>(null); // add ref
+
   const { transactionId } = route.params;
   const transaction = transactions.find(t => t.id === transactionId);
 
@@ -51,7 +52,6 @@ export default function EditTransactionScreen() {
       setSelectedWallet(transaction.wallet);
       setDate(new Date(transaction.date));
 
-      // Find and set category
       const categories = transaction.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
       const category = categories.find(c => c.name === transaction.category);
       setSelectedCategory(category || null);
@@ -66,19 +66,15 @@ export default function EditTransactionScreen() {
     );
   }
 
-  // Parse amount for display
   const getAmountParts = () => {
     if (!amount) return { dollars: '', cents: '.00', hasDecimal: false };
-
     const parts = amount.split('.');
     const dollars = parts[0];
     const cents = parts[1];
-
     if (cents !== undefined) {
       const centDisplay = cents.padEnd(3, '0').slice(0, 2);
       return { dollars, cents: '.' + centDisplay, hasDecimal: true };
     }
-
     return { dollars, cents: '.00', hasDecimal: false };
   };
 
@@ -140,40 +136,43 @@ export default function EditTransactionScreen() {
 
       <ScrollView className="flex-1">
         {/* Amount Input */}
-        <View className="bg-white px-6 py-8 items-center">
+        <TouchableOpacity // wrap with tappable zone
+          activeOpacity={1}
+          onPress={() => amountInputRef.current?.focus()}
+          className="bg-white px-6 py-8 items-center"
+        >
           <Text className="text-textSecondary text-sm mb-2">Amount</Text>
           <View className="flex-row items-center justify-center">
             <Text className="text-5xl font-bold text-textSecondary mr-1">{currency.symbol}</Text>
-            <View className="flex-row items-baseline">
-              <View style={{ position: 'relative' }}>
-                <TextInput
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder=""
-                  keyboardType="decimal-pad"
-                  className="text-5xl font-bold text-textPrimary"
-                  style={{
-                    position: 'absolute',
-                    opacity: 0,
-                    width: 200,
-                  }}
-                />
-                <View className="flex-row items-baseline">
-                  <Text className="text-5xl font-bold text-textPrimary">
-                    {displayAmount.dollars || '0'}
-                  </Text>
-                  <Text
-                    className={`text-5xl font-bold ${
-                      displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'
-                    }`}
-                  >
-                    {displayAmount.cents}
-                  </Text>
-                </View>
+            <View style={{ position: 'relative' }}>
+              <TextInput
+                ref={amountInputRef} // attach ref
+                value={amount}
+                onChangeText={setAmount}
+                placeholder=""
+                keyboardType="decimal-pad"
+                style={{
+                  position: 'absolute',
+                  opacity: 0,
+                  width: 200,
+                  height: '100%', // fill tap area
+                }}
+              />
+              <View className="flex-row items-baseline">
+                <Text className="text-5xl font-bold text-textPrimary">
+                  {displayAmount.dollars || '0'}
+                </Text>
+                <Text
+                  className={`text-5xl font-bold ${
+                    displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'
+                  }`}
+                >
+                  {displayAmount.cents}
+                </Text>
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Title/Description Input */}
         <View className="px-6 py-4">
@@ -201,32 +200,23 @@ export default function EditTransactionScreen() {
                 setType('expense');
                 setSelectedCategory(null);
               }}
-              className={`flex-1 py-4 rounded-xl ${
-                type === 'expense' ? 'bg-expense' : 'bg-transparent'
-              }`}
+              className={`flex-1 py-4 rounded-xl ${type === 'expense' ? 'bg-expense' : 'bg-transparent'}`}
             >
               <Text
-                className={`text-center font-semibold text-base ${
-                  type === 'expense' ? 'text-white' : 'text-textSecondary'
-                }`}
+                className={`text-center font-semibold text-base ${type === 'expense' ? 'text-white' : 'text-textSecondary'}`}
               >
                 Expense
               </Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               onPress={() => {
                 setType('income');
                 setSelectedCategory(null);
               }}
-              className={`flex-1 py-4 rounded-xl ${
-                type === 'income' ? 'bg-income' : 'bg-transparent'
-              }`}
+              className={`flex-1 py-4 rounded-xl ${type === 'income' ? 'bg-income' : 'bg-transparent'}`}
             >
               <Text
-                className={`text-center font-semibold text-base ${
-                  type === 'income' ? 'text-white' : 'text-textSecondary'
-                }`}
+                className={`text-center font-semibold text-base ${type === 'income' ? 'text-white' : 'text-textSecondary'}`}
               >
                 Income
               </Text>
@@ -272,9 +262,7 @@ export default function EditTransactionScreen() {
           className={`py-4 rounded-2xl ${isValid ? 'bg-primary' : 'bg-border'}`}
         >
           <Text
-            className={`text-center font-semibold text-lg ${
-              isValid ? 'text-white' : 'text-textSecondary'
-            }`}
+            className={`text-center font-semibold text-lg ${isValid ? 'text-white' : 'text-textSecondary'}`}
           >
             Save Changes
           </Text>

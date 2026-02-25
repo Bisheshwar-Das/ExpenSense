@@ -1,5 +1,5 @@
 // screens/AddTransactionScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ export default function AddTransactionScreen() {
   const { addTransaction } = useTransactions();
   const { wallets } = useWallets();
   const { currency } = useSettings();
+  const amountInputRef = useRef<TextInput>(null);
 
   const insets = useSafeAreaInsets();
 
@@ -159,43 +160,44 @@ export default function AddTransactionScreen() {
 
       <ScrollView className="flex-1">
         {/* Amount Input - BIG and centered */}
-        <View className="bg-white px-6 py-8 items-center">
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => amountInputRef.current?.focus()}
+          className="bg-white px-6 py-8 items-center"
+        >
           <Text className="text-textSecondary text-sm mb-2">Amount</Text>
           <View className="flex-row items-center justify-center">
             <Text className="text-5xl font-bold text-textSecondary mr-1">{currency.symbol}</Text>
-            <View className="flex-row items-baseline">
-              {/* Hidden input - we control display */}
-              <View style={{ position: 'relative' }}>
-                <TextInput
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder=""
-                  keyboardType="decimal-pad"
-                  className="text-5xl font-bold text-textPrimary"
-                  style={{
-                    position: 'absolute',
-                    opacity: 0,
-                    width: 200,
-                  }}
-                  autoFocus
-                />
-                {/* Display text */}
-                <View className="flex-row items-baseline">
-                  <Text className="text-5xl font-bold text-textPrimary">
-                    {displayAmount.dollars || '0'}
-                  </Text>
-                  <Text
-                    className={`text-5xl font-bold ${
-                      displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'
-                    }`}
-                  >
-                    {displayAmount.cents}
-                  </Text>
-                </View>
+            <View style={{ position: 'relative' }}>
+              <TextInput
+                ref={amountInputRef}
+                value={amount}
+                onChangeText={setAmount}
+                placeholder=""
+                keyboardType="decimal-pad"
+                style={{
+                  position: 'absolute',
+                  opacity: 0,
+                  width: 200,
+                  height: '100%',
+                }}
+                autoFocus
+              />
+              <View className="flex-row items-baseline">
+                <Text className="text-5xl font-bold text-textPrimary">
+                  {displayAmount.dollars || '0'}
+                </Text>
+                <Text
+                  className={`text-5xl font-bold ${
+                    displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'
+                  }`}
+                >
+                  {displayAmount.cents}
+                </Text>
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Title/Description Input */}
         <View className="px-6 py-4">
