@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Wallet, WALLET_COLORS, WALLET_ICONS } from '../types';
+import { Wallet, WalletType, WALLET_COLORS, WALLET_ICONS, WALLET_TYPES } from '../types';
 
 type WalletModalProps = {
   visible: boolean;
@@ -22,18 +22,22 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState(WALLET_COLORS[0].value);
   const [selectedIcon, setSelectedIcon] = useState(WALLET_ICONS[0]);
+  const [selectedType, setSelectedType] = useState<WalletType>('checking');
+  const [creditLimit, setCreditLimit] = useState('');
 
-  // Pre-fill form when editing
   useEffect(() => {
     if (editWallet) {
       setName(editWallet.name);
       setSelectedColor(editWallet.color);
       setSelectedIcon(editWallet.icon);
+      setSelectedType(editWallet.type ?? 'checking');
+      setCreditLimit(editWallet.creditLimit?.toString() ?? '');
     } else {
-      // Reset for new wallet
       setName('');
       setSelectedColor(WALLET_COLORS[0].value);
       setSelectedIcon(WALLET_ICONS[0]);
+      setSelectedType('checking');
+      setCreditLimit('');
     }
   }, [editWallet, visible]);
 
@@ -47,10 +51,14 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
       name: name.trim(),
       color: selectedColor,
       icon: selectedIcon,
+      type: selectedType,
+      ...(selectedType === 'credit' && creditLimit ? { creditLimit: parseFloat(creditLimit) } : {}),
     });
 
     onClose();
   };
+
+  const selectedTypeData = WALLET_TYPES.find(t => t.type === selectedType);
 
   return (
     <Modal
@@ -88,6 +96,9 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
               <Text className="text-5xl">{selectedIcon}</Text>
             </View>
             <Text className="text-textPrimary text-xl font-semibold">{name || 'Wallet Name'}</Text>
+            {selectedTypeData && (
+              <Text className="text-textSecondary text-sm mt-1">{selectedTypeData.label}</Text>
+            )}
           </View>
 
           {/* Wallet Name */}
@@ -104,6 +115,53 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
               />
             </View>
           </View>
+
+          {/* Wallet Type */}
+          <View className="mb-6">
+            <Text className="text-textSecondary text-sm mb-3">Wallet Type</Text>
+            <View className="bg-white rounded-2xl p-4 gap-2">
+              {WALLET_TYPES.map(wt => (
+                <TouchableOpacity
+                  key={wt.type}
+                  onPress={() => setSelectedType(wt.type)}
+                  className={`flex-row items-center p-4 rounded-2xl ${
+                    selectedType === wt.type
+                      ? 'bg-primary/10 border-2 border-primary'
+                      : 'bg-background'
+                  }`}
+                >
+                  <View
+                    className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+                    style={{ backgroundColor: selectedColor + '20' }}
+                  >
+                    <Text className="text-xl">{wt.icon}</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-textPrimary font-semibold text-sm">{wt.label}</Text>
+                    <Text className="text-textSecondary text-xs">{wt.description}</Text>
+                  </View>
+                  {selectedType === wt.type && <Text className="text-primary text-xl">✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Credit Limit — only shown for credit type */}
+          {selectedType === 'credit' && (
+            <View className="mb-6">
+              <Text className="text-textSecondary text-sm mb-3">Credit Limit (Optional)</Text>
+              <View className="bg-white rounded-2xl p-4">
+                <TextInput
+                  value={creditLimit}
+                  onChangeText={setCreditLimit}
+                  placeholder="e.g., 5000"
+                  placeholderTextColor="#64748B"
+                  keyboardType="decimal-pad"
+                  className="text-textPrimary text-base"
+                />
+              </View>
+            </View>
+          )}
 
           {/* Color Picker */}
           <View className="mb-6">

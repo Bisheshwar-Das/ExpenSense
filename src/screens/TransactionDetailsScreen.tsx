@@ -3,6 +3,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTransactions } from '../contexts/TransactionContext';
+import { useWallets } from '../contexts/WalletContext';
+import { useGoals } from '../contexts/GoalContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp, TransactionDetailsRouteProp } from '../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,16 +13,14 @@ export default function TransactionDetailsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const route = useRoute<TransactionDetailsRouteProp>();
   const { transactions, deleteTransaction } = useTransactions();
+  const { wallets } = useWallets();
+  const { goals } = useGoals();
   const { currency } = useSettings();
   const insets = useSafeAreaInsets();
 
-  // Get transaction ID from route params
   const { transactionId } = route.params;
-
-  // Find the transaction
   const transaction = transactions.find(t => t.id === transactionId);
 
-  // If transaction not found
   if (!transaction) {
     return (
       <View className="flex-1 bg-background justify-center items-center">
@@ -35,7 +35,14 @@ export default function TransactionDetailsScreen() {
     );
   }
 
-  // Format date
+  const isTransfer = transaction.type === 'transfer';
+
+  const fromWallet = wallets.find(w => w.name === transaction.wallet);
+  const toWallet = transaction.toWalletId
+    ? wallets.find(w => w.id === transaction.toWalletId)
+    : null;
+  const toGoal = transaction.toGoalId ? goals.find(g => g.id === transaction.toGoalId) : null;
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -49,32 +56,51 @@ export default function TransactionDetailsScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Transaction',
-      'Are you sure you want to delete this transaction? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteTransaction(transaction.id);
-              Alert.alert('Success', 'Transaction deleted', [
-                { text: 'OK', onPress: () => navigation.goBack() },
-              ]);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete transaction');
-            }
-          },
+    Alert.alert('Delete Transaction', 'Are you sure? This action cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteTransaction(transaction.id);
+            Alert.alert('Deleted', 'Transaction deleted', [
+              { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete transaction');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleEdit = () => {
     navigation.navigate('EditTransaction', { transactionId: transaction.id });
   };
+
+  // Amount display config based on type
+  const amountColor = isTransfer
+    ? 'text-primary'
+    : transaction.type === 'income'
+      ? 'text-income'
+      : 'text-expense';
+
+  const amountPrefix = isTransfer ? '⇄ ' : transaction.type === 'income' ? '+' : '-';
+
+  const typeBadgeColor = isTransfer
+    ? 'bg-primary/10'
+    : transaction.type === 'income'
+      ? 'bg-income/10'
+      : 'bg-expense/10';
+
+  const typeBadgeText = isTransfer
+    ? 'text-primary'
+    : transaction.type === 'income'
+      ? 'text-income'
+      : 'text-expense';
+
+  const typeLabel = isTransfer ? 'Transfer' : transaction.type === 'income' ? 'Income' : 'Expense';
 
   return (
     <View className="flex-1 bg-background">
@@ -87,7 +113,7 @@ export default function TransactionDetailsScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text className="text-white text-lg">← Back</Text>
           </TouchableOpacity>
-          <Text className="text-textPrimary text-xl font-semibold">Transaction Details</Text>
+          <Text className="text-white text-xl font-semibold">Transaction Details</Text>
           <View style={{ width: 60 }} />
         </View>
       </View>
@@ -96,45 +122,42 @@ export default function TransactionDetailsScreen() {
         {/* Amount Card */}
         <View className="bg-white px-6 py-8 items-center border-b border-border">
           <Text className="text-textSecondary text-sm mb-2">Amount</Text>
-          <Text
-            className={`text-5xl font-bold ${
-              transaction.type === 'income' ? 'text-income' : 'text-expense'
-            }`}
-          >
-            {transaction.type === 'income' ? '+' : '-'}
+          <Text className={`text-5xl font-bold ${amountColor}`}>
+            {amountPrefix}
             {currency.symbol}
             {Math.abs(transaction.amount).toFixed(2)}
           </Text>
-          <View
-            className={`mt-3 px-4 py-1 rounded-full ${
-              transaction.type === 'income' ? 'bg-income/10' : 'bg-expense/10'
-            }`}
-          >
-            <Text
-              className={`text-sm font-medium ${
-                transaction.type === 'income' ? 'text-income' : 'text-expense'
-              }`}
-            >
-              {transaction.type === 'income' ? 'Income' : 'Expense'}
-            </Text>
+          <View className={`mt-3 px-4 py-1 rounded-full ${typeBadgeColor}`}>
+            <Text className={`text-sm font-medium ${typeBadgeText}`}>{typeLabel}</Text>
           </View>
         </View>
 
-        {/* Details Section */}
         <View className="p-6">
-          {/* Title */}
           <DetailRow label="Description" value={transaction.title} />
-
-          {/* Category */}
-          <DetailRow label="Category" value={transaction.category} />
-
-          {/* Wallet */}
-          <DetailRow label="Wallet" value={transaction.wallet} />
-
-          {/* Date */}
           <DetailRow label="Date & Time" value={formatDate(transaction.date)} />
 
-          {/* Notes */}
+          {/* Transfer-specific rows */}
+          {isTransfer ? (
+            <>
+              <DetailRow
+                label="From"
+                value={fromWallet ? `${fromWallet.icon} ${fromWallet.name}` : transaction.wallet}
+              />
+              {toWallet && (
+                <DetailRow label="To Wallet" value={`${toWallet.icon} ${toWallet.name}`} />
+              )}
+              {toGoal && (
+                <DetailRow label="Earmarked For" value={`${toGoal.icon} ${toGoal.name}`} />
+              )}
+              {!toWallet && !toGoal && <DetailRow label="To" value="Unknown destination" />}
+            </>
+          ) : (
+            <>
+              <DetailRow label="Category" value={transaction.category} />
+              <DetailRow label="Wallet" value={transaction.wallet} />
+            </>
+          )}
+
           {transaction.notes && (
             <View className="bg-white p-4 rounded-2xl mb-3">
               <Text className="text-textSecondary text-sm mb-2">Notes</Text>
@@ -144,28 +167,27 @@ export default function TransactionDetailsScreen() {
         </View>
       </ScrollView>
 
-      {/* Action Buttons - Fixed at bottom */}
+      {/* Action Buttons */}
       <View className="bg-white px-6 py-4 border-t border-border">
         <View className="flex-row gap-3">
-          {/* Delete Button */}
           <TouchableOpacity
             onPress={handleDelete}
             className="flex-1 py-4 rounded-2xl bg-expense/10 border border-expense/20"
           >
             <Text className="text-center font-semibold text-lg text-expense">🗑️ Delete</Text>
           </TouchableOpacity>
-
-          {/* Edit Button */}
-          <TouchableOpacity onPress={handleEdit} className="flex-1 py-4 rounded-2xl bg-primary">
-            <Text className="text-center font-semibold text-lg text-white">✏️ Edit</Text>
-          </TouchableOpacity>
+          {/* Only show edit for non-transfers — editing transfers is complex */}
+          {!isTransfer && (
+            <TouchableOpacity onPress={handleEdit} className="flex-1 py-4 rounded-2xl bg-primary">
+              <Text className="text-center font-semibold text-lg text-white">✏️ Edit</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
   );
 }
 
-// Helper component for detail rows
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="bg-white p-4 rounded-2xl mb-3">

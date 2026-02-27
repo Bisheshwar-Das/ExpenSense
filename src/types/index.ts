@@ -8,19 +8,25 @@ export interface Transaction {
   category: string;
   date: string;
   wallet: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer';
   notes?: string;
+  toWalletId?: string; // if transferring to another wallet
+  toGoalId?: string; // if transferring to a savings goal (earmarked)
 }
+
+export type TransactionType = 'income' | 'expense' | 'transfer';
+
+export type WalletType = 'checking' | 'savings' | 'cash' | 'credit' | 'investment';
 
 export interface Wallet {
   id: string;
   name: string;
   icon: string;
   color: string;
+  type: WalletType;
+  creditLimit?: number; // credit wallets only
   createdAt: string;
 }
-
-export type TransactionType = 'income' | 'expense';
 
 export type Category = {
   id: string;
@@ -49,12 +55,57 @@ export const INCOME_CATEGORIES: Category[] = [
   { id: '13', name: 'Other', icon: '💵', type: 'income' },
 ];
 
+// Wallet type metadata — labels, icons, descriptions for UI
+export const WALLET_TYPES: {
+  type: WalletType;
+  label: string;
+  icon: string;
+  description: string;
+}[] = [
+  { type: 'checking', label: 'Checking', icon: '👛', description: 'Everyday spending account' },
+  { type: 'savings', label: 'Savings', icon: '🏦', description: 'Digital savings account' },
+  { type: 'cash', label: 'Cash', icon: '💵', description: 'Physical cash on hand' },
+  { type: 'credit', label: 'Credit', icon: '💳', description: 'Credit card or line of credit' },
+  { type: 'investment', label: 'Investment', icon: '📈', description: 'Investments & brokerage' },
+];
+
+// Which wallet types trigger the "which goal is this for?" prompt on incoming transfers
+export const SAVINGS_WALLET_TYPES: WalletType[] = ['savings', 'cash'];
+
 // Default wallets
 export const DEFAULT_WALLETS: Wallet[] = [
-  { id: '1', name: 'Main Wallet', icon: '👛', color: '#0891B2', createdAt: DEFAULT_CREATED_AT },
-  { id: '2', name: 'Cash', icon: '💵', color: '#10B981', createdAt: DEFAULT_CREATED_AT },
-  { id: '3', name: 'Credit Card', icon: '💳', color: '#F59E0B', createdAt: DEFAULT_CREATED_AT },
-  { id: '4', name: 'Savings', icon: '🏦', color: '#8B5CF6', createdAt: DEFAULT_CREATED_AT },
+  {
+    id: '1',
+    name: 'Main Wallet',
+    icon: '👛',
+    color: '#0891B2',
+    type: 'checking',
+    createdAt: DEFAULT_CREATED_AT,
+  },
+  {
+    id: '2',
+    name: 'Cash',
+    icon: '💵',
+    color: '#10B981',
+    type: 'cash',
+    createdAt: DEFAULT_CREATED_AT,
+  },
+  {
+    id: '3',
+    name: 'Credit Card',
+    icon: '💳',
+    color: '#F59E0B',
+    type: 'credit',
+    createdAt: DEFAULT_CREATED_AT,
+  },
+  {
+    id: '4',
+    name: 'Savings',
+    icon: '🏦',
+    color: '#8B5CF6',
+    type: 'savings',
+    createdAt: DEFAULT_CREATED_AT,
+  },
 ];
 
 export const WALLET_COLORS = [
@@ -90,40 +141,13 @@ export interface Goal {
   type: GoalType;
   name: string;
   targetAmount: number;
-  currentAmount: number;
-  category?: string; // Optional, used for budget goals
-  period?: 'weekly' | 'monthly' | 'yearly'; // Optional, used for budget goals
+  category?: string; // budget goals only
+  period?: 'weekly' | 'monthly' | 'yearly'; // budget goals only
   icon: string;
   color: string;
-  deadline?: string; // Optional, ISO date string
+  deadline?: string; // ISO date string, savings goals only
   createdAt: string;
 }
 
 // Helper type for creating new goals (without id and createdAt)
 export type NewGoal = Omit<Goal, 'id' | 'createdAt'>;
-
-// Example usage:
-// Savings Goal:
-// {
-//   type: 'savings',
-//   name: 'New iPhone',
-//   targetAmount: 1200,
-//   currentAmount: 450,
-//   icon: '📱',
-//   color: '#2563EB',
-//   deadline: '2025-12-31T00:00:00.000Z',
-//   createdAt: '2025-01-01T00:00:00.000Z'
-// }
-//
-// Budget Goal:
-// {
-//   type: 'budget',
-//   name: 'Food Budget',
-//   targetAmount: 500,
-//   currentAmount: 0,
-//   category: 'Food',
-//   period: 'monthly',
-//   icon: '🍔',
-//   color: '#10B981',
-//   createdAt: '2025-01-01T00:00:00.000Z'
-// }

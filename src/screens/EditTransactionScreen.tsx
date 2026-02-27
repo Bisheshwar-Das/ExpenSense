@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'; // add useRef
+// screens/EditTransactionScreen.tsx
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,9 +14,11 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { TransactionType, EXPENSE_CATEGORIES, INCOME_CATEGORIES, Category } from '../types';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
+import { useGoals } from '../contexts/GoalContext';
 import { RootNavigationProp, EditTransactionRouteProp } from '../navigation/types';
 import CategoryPicker from '../components/CategoryPicker';
 import WalletPicker from '../components/WalletPicker';
+import TransferToPicker from '../components/TransferToPicker';
 import DatePickerField from '../components/DatePicker';
 import { useSettings } from '../contexts/SettingsContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,24 +28,24 @@ export default function EditTransactionScreen() {
   const route = useRoute<EditTransactionRouteProp>();
   const { transactions, updateTransaction } = useTransactions();
   const { wallets } = useWallets();
+  const { goals } = useGoals();
   const { currency } = useSettings();
   const insets = useSafeAreaInsets();
-
-  const amountInputRef = useRef<TextInput>(null); // add ref
+  const amountInputRef = useRef<TextInput>(null);
 
   const { transactionId } = route.params;
   const transaction = transactions.find(t => t.id === transactionId);
 
-  // Form state
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [type, setType] = useState<TransactionType>('expense');
+  const [type, setType] = useState<TransactionType | 'transfer'>('expense');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedWallet, setSelectedWallet] = useState<string>('');
+  const [selectedWallet, setSelectedWallet] = useState('');
+  const [toWalletId, setToWalletId] = useState('');
+  const [toGoalId, setToGoalId] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date());
 
-  // Pre-fill form with transaction data
   useEffect(() => {
     if (transaction) {
       setTitle(transaction.title);
@@ -51,10 +54,13 @@ export default function EditTransactionScreen() {
       setNotes(transaction.notes || '');
       setSelectedWallet(transaction.wallet);
       setDate(new Date(transaction.date));
+      setToWalletId(transaction.toWalletId || '');
+      setToGoalId(transaction.toGoalId || '');
 
-      const categories = transaction.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-      const category = categories.find(c => c.name === transaction.category);
-      setSelectedCategory(category || null);
+      if (transaction.type !== 'transfer') {
+        const cats = transaction.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+        setSelectedCategory(cats.find(c => c.name === transaction.category) || null);
+      }
     }
   }, [transaction]);
 
@@ -72,8 +78,7 @@ export default function EditTransactionScreen() {
     const dollars = parts[0];
     const cents = parts[1];
     if (cents !== undefined) {
-      const centDisplay = cents.padEnd(3, '0').slice(0, 2);
-      return { dollars, cents: '.' + centDisplay, hasDecimal: true };
+      return { dollars, cents: '.' + cents.padEnd(3, '0').slice(0, 2), hasDecimal: true };
     }
     return { dollars, cents: '.00', hasDecimal: false };
   };
@@ -81,12 +86,19 @@ export default function EditTransactionScreen() {
   const displayAmount = getAmountParts();
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
-  const isValid =
-    title.trim() !== '' &&
-    amount !== '' &&
-    parseFloat(amount) > 0 &&
-    selectedCategory !== null &&
-    selectedWallet !== '';
+  const isValid = (() => {
+    const base =
+      title.trim() !== '' && amount !== '' && parseFloat(amount) > 0 && selectedWallet !== '';
+    if (type === 'transfer') return base && (toWalletId !== '' || toGoalId !== '');
+    return base && selectedCategory !== null;
+  })();
+
+  const handleTypeChange = (newType: typeof type) => {
+    setType(newType);
+    setSelectedCategory(null);
+    setToWalletId('');
+    setToGoalId('');
+  };
 
   const handleSave = async () => {
     if (!isValid) {
@@ -100,19 +112,20 @@ export default function EditTransactionScreen() {
 
       await updateTransaction(transaction.id, {
         title: title.trim(),
-        amount: finalAmount,
+        amount: type === 'transfer' ? numericAmount : finalAmount,
         type,
-        category: selectedCategory?.name || '',
+        category: type === 'transfer' ? 'Transfer' : selectedCategory?.name || '',
         date: date.toISOString(),
         wallet: selectedWallet,
         notes,
+        toWalletId: type === 'transfer' ? toWalletId || undefined : undefined,
+        toGoalId: type === 'transfer' ? toGoalId || undefined : undefined,
       });
 
       Alert.alert('Success', 'Transaction updated! ✅', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (error) {
-      console.error('Error updating transaction:', error);
       Alert.alert('Error', 'Failed to update transaction. Please try again.');
     }
   };
@@ -135,8 +148,8 @@ export default function EditTransactionScreen() {
       </View>
 
       <ScrollView className="flex-1">
-        {/* Amount Input */}
-        <TouchableOpacity // wrap with tappable zone
+        {/* Amount */}
+        <TouchableOpacity
           activeOpacity={1}
           onPress={() => amountInputRef.current?.focus()}
           className="bg-white px-6 py-8 items-center"
@@ -146,26 +159,18 @@ export default function EditTransactionScreen() {
             <Text className="text-5xl font-bold text-textSecondary mr-1">{currency.symbol}</Text>
             <View style={{ position: 'relative' }}>
               <TextInput
-                ref={amountInputRef} // attach ref
+                ref={amountInputRef}
                 value={amount}
                 onChangeText={setAmount}
-                placeholder=""
                 keyboardType="decimal-pad"
-                style={{
-                  position: 'absolute',
-                  opacity: 0,
-                  width: 200,
-                  height: '100%', // fill tap area
-                }}
+                style={{ position: 'absolute', opacity: 0, width: 200, height: '100%' }}
               />
               <View className="flex-row items-baseline">
                 <Text className="text-5xl font-bold text-textPrimary">
                   {displayAmount.dollars || '0'}
                 </Text>
                 <Text
-                  className={`text-5xl font-bold ${
-                    displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'
-                  }`}
+                  className={`text-5xl font-bold ${displayAmount.hasDecimal ? 'text-textPrimary' : 'text-textSecondary/40'}`}
                 >
                   {displayAmount.cents}
                 </Text>
@@ -174,7 +179,7 @@ export default function EditTransactionScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Title/Description Input */}
+        {/* Description */}
         <View className="px-6 py-4">
           <Text className="text-textSecondary text-sm mb-3">
             Description <Text className="text-expense">*</Text>
@@ -183,7 +188,7 @@ export default function EditTransactionScreen() {
             <TextInput
               value={title}
               onChangeText={setTitle}
-              placeholder="e.g., Lunch at Subway, Monthly salary, etc."
+              placeholder="e.g., Lunch at Subway, Monthly salary..."
               placeholderTextColor="#94A3B8"
               className="text-textPrimary text-base"
               style={{ minHeight: 44 }}
@@ -196,10 +201,7 @@ export default function EditTransactionScreen() {
           <Text className="text-textSecondary text-sm mb-3">Type</Text>
           <View className="bg-white rounded-2xl p-2 flex-row gap-2">
             <TouchableOpacity
-              onPress={() => {
-                setType('expense');
-                setSelectedCategory(null);
-              }}
+              onPress={() => handleTypeChange('expense')}
               className={`flex-1 py-4 rounded-xl ${type === 'expense' ? 'bg-expense' : 'bg-transparent'}`}
             >
               <Text
@@ -209,10 +211,7 @@ export default function EditTransactionScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => {
-                setType('income');
-                setSelectedCategory(null);
-              }}
+              onPress={() => handleTypeChange('income')}
               className={`flex-1 py-4 rounded-xl ${type === 'income' ? 'bg-income' : 'bg-transparent'}`}
             >
               <Text
@@ -221,16 +220,45 @@ export default function EditTransactionScreen() {
                 Income
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleTypeChange('transfer')}
+              className={`flex-1 py-4 rounded-xl ${type === 'transfer' ? 'bg-primary' : 'bg-transparent'}`}
+            >
+              <Text
+                className={`text-center font-semibold text-base ${type === 'transfer' ? 'text-white' : 'text-textSecondary'}`}
+              >
+                ⇄ Transfer
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <CategoryPicker
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+        {/* Category — hidden for transfers */}
+        {type !== 'transfer' && (
+          <CategoryPicker
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
+        )}
+
+        {/* From Wallet */}
+        <WalletPicker
+          label={type === 'transfer' ? 'From' : 'Wallet'}
+          selectedWallet={selectedWallet}
+          onSelectWallet={setSelectedWallet}
         />
 
-        <WalletPicker selectedWallet={selectedWallet} onSelectWallet={setSelectedWallet} />
+        {/* To — only for transfers */}
+        {type === 'transfer' && (
+          <TransferToPicker
+            selectedWalletId={toWalletId}
+            selectedGoalId={toGoalId}
+            excludeWalletName={selectedWallet}
+            onSelectWallet={setToWalletId}
+            onSelectGoal={setToGoalId}
+          />
+        )}
 
         <DatePickerField date={date} onDateChange={setDate} />
 
