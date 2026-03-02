@@ -9,6 +9,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Pressable,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Goal, GoalType, EXPENSE_CATEGORIES } from '../types';
@@ -60,6 +61,7 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
   const [selectedColor, setSelectedColor] = useState(GOAL_COLORS[0]);
   const [deadline, setDeadline] = useState<Date | undefined>(undefined);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(tomorrow()); // iOS staging
 
   useEffect(() => {
     if (editGoal) {
@@ -267,7 +269,10 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
                 </Text>
 
                 <TouchableOpacity
-                  onPress={() => setShowDatePicker(true)}
+                  onPress={() => {
+                    setTempDate(deadline || tomorrow());
+                    setShowDatePicker(true);
+                  }}
                   className={`rounded-2xl p-4 flex-row items-center justify-between ${
                     deadline
                       ? 'bg-primary/10 border-2 border-primary'
@@ -295,17 +300,70 @@ export default function GoalModal({ visible, onClose, editGoal, defaultType }: G
                   )}
                 </TouchableOpacity>
 
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={deadline || tomorrow()}
-                    mode="date"
-                    minimumDate={tomorrow()}
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(Platform.OS === 'ios');
-                      if (selectedDate) setDeadline(selectedDate);
-                    }}
-                  />
+                {/* iOS — separate modal sheet so picker is on solid white background */}
+                {Platform.OS === 'ios' ? (
+                  <Modal
+                    visible={showDatePicker}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setShowDatePicker(false)}
+                  >
+                    <Pressable
+                      className="flex-1 bg-black/40"
+                      onPress={() => setShowDatePicker(false)}
+                    >
+                      <Pressable
+                        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl"
+                        onPress={e => e.stopPropagation()}
+                      >
+                        {/* Sheet header */}
+                        <View className="flex-row justify-between items-center px-6 py-4 border-b border-border">
+                          <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                            <Text className="text-textSecondary text-lg">Cancel</Text>
+                          </TouchableOpacity>
+                          <Text className="text-textPrimary font-semibold text-base">
+                            Achieve By
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => {
+                              setDeadline(tempDate);
+                              setShowDatePicker(false);
+                            }}
+                          >
+                            <Text className="text-primary text-lg font-semibold">Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                        {/* Picker on solid white — dates always visible */}
+                        <View className="bg-white pb-8">
+                          <DateTimePicker
+                            value={tempDate}
+                            mode="date"
+                            minimumDate={tomorrow()}
+                            display="spinner"
+                            textColor="#1E293B"
+                            onChange={(_, selectedDate) => {
+                              if (selectedDate) setTempDate(selectedDate);
+                            }}
+                            style={{ backgroundColor: 'white' }}
+                          />
+                        </View>
+                      </Pressable>
+                    </Pressable>
+                  </Modal>
+                ) : (
+                  /* Android — inline default picker works fine */
+                  showDatePicker && (
+                    <DateTimePicker
+                      value={deadline || tomorrow()}
+                      mode="date"
+                      minimumDate={tomorrow()}
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowDatePicker(false);
+                        if (selectedDate) setDeadline(selectedDate);
+                      }}
+                    />
+                  )
                 )}
               </View>
             )}

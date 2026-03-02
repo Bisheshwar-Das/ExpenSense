@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Wallet, WalletType, WALLET_COLORS, WALLET_ICONS, WALLET_TYPES } from '../types';
 
 type WalletModalProps = {
@@ -19,6 +20,7 @@ type WalletModalProps = {
 };
 
 export default function WalletModal({ visible, onClose, onSave, editWallet }: WalletModalProps) {
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState(WALLET_COLORS[0].value);
   const [selectedIcon, setSelectedIcon] = useState(WALLET_ICONS[0]);
@@ -72,7 +74,10 @@ export default function WalletModal({ visible, onClose, onSave, editWallet }: Wa
         className="flex-1 bg-background"
       >
         {/* Header */}
-        <View className="bg-white px-6 py-4 border-b border-border">
+        <View
+          className="bg-white px-6 py-4 border-b border-border"
+          style={{ paddingTop: insets.top + 8 }}
+        >
           <View className="flex-row items-center justify-between">
             <TouchableOpacity onPress={onClose}>
               <Text className="text-primary text-lg">Cancel</Text>
