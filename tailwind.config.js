@@ -15,6 +15,7 @@ module.exports = {
         textPrimary: '#0F172A',
         textSecondary: '#64748B',
         border: '#E5E7EB',
+        filterBar: '#EFF9F8',
       },
     },
   },

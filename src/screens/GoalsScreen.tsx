@@ -20,6 +20,12 @@ export default function GoalsScreen() {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedTab, setSelectedTab] = useState<'savings' | 'budget'>('savings');
 
+  type SavingsSort = 'urgency' | 'progress' | 'amount';
+  type BudgetSort = 'overspend' | 'amount' | 'name';
+  const [savingsSort, setSavingsSort] = useState<SavingsSort>('urgency');
+  const [budgetSort, setBudgetSort] = useState<BudgetSort>('overspend');
+  const [sortAsc, setSortAsc] = useState(false);
+
   const savingsGoals = goals.filter(g => g.type === 'savings');
   const budgetGoals = goals.filter(g => g.type === 'budget');
 
@@ -152,12 +158,12 @@ export default function GoalsScreen() {
         key={goal.id}
         onPress={() => handleEditGoal(goal)}
         onLongPress={() => handleDeleteGoal(goal)}
-        className="bg-card rounded-2xl mb-3 overflow-hidden"
+        className="bg-card rounded-2xl mb-3 overflow-hidden border border-border"
         style={{
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 6,
           elevation: 2,
         }}
       >
@@ -261,12 +267,12 @@ export default function GoalsScreen() {
         key={goal.id}
         onPress={() => handleEditGoal(goal)}
         onLongPress={() => handleDeleteGoal(goal)}
-        className="bg-card p-5 rounded-2xl mb-3"
+        className="bg-card p-5 rounded-2xl mb-3 border border-border"
         style={{
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 6,
           elevation: 2,
         }}
       >
@@ -323,12 +329,12 @@ export default function GoalsScreen() {
     return (
       <View className="px-6 pt-6">
         <View
-          className="bg-card rounded-2xl mb-4 overflow-hidden"
+          className="bg-card rounded-2xl mb-4 overflow-hidden border border-border"
           style={{
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 6,
             elevation: 2,
           }}
         >
@@ -458,45 +464,141 @@ export default function GoalsScreen() {
           </View>
         </AppHeader>
 
-        {/* Smart savings summary — only on savings tab */}
+        {/* Summary — savings tab only */}
         {selectedTab === 'savings' && renderSavingsSummary()}
 
-        <View className="p-6">
+        <View className="px-6 pb-6">
+          {/* Inline add row */}
+          <TouchableOpacity
+            onPress={handleAddGoal}
+            className="flex-row items-center bg-card rounded-2xl px-4 py-3 mb-4 mt-4 border border-dashed border-primary"
+          >
+            <View className="w-10 h-10 rounded-xl bg-primary/10 items-center justify-center mr-3">
+              <Text className="text-primary text-xl font-bold">＋</Text>
+            </View>
+            <Text className="text-primary font-semibold text-base">
+              Add {selectedTab === 'savings' ? 'Savings Goal' : 'Budget'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* List header + sort pills + direction arrow */}
+          {((selectedTab === 'savings' && savingsGoals.length > 0) ||
+            (selectedTab === 'budget' && budgetGoals.length > 0)) && (
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-textPrimary font-semibold text-base">
+                {selectedTab === 'savings' ? 'Savings Goals' : 'Budgets'}
+              </Text>
+              <View className="flex-row items-center gap-2">
+                {/* Sort pills */}
+                {(selectedTab === 'savings'
+                  ? ([
+                      { key: 'urgency', label: 'Urgency' },
+                      { key: 'progress', label: 'Progress' },
+                      { key: 'amount', label: 'Amount' },
+                    ] as { key: SavingsSort; label: string }[])
+                  : ([
+                      { key: 'overspend', label: 'Overspend' },
+                      { key: 'amount', label: 'Amount' },
+                      { key: 'name', label: 'Name' },
+                    ] as { key: BudgetSort; label: string }[])
+                ).map(opt => {
+                  const isActive =
+                    selectedTab === 'savings'
+                      ? savingsSort === opt.key
+                      : budgetSort === (opt.key as BudgetSort);
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      onPress={() => {
+                        if (selectedTab === 'savings') setSavingsSort(opt.key as SavingsSort);
+                        else setBudgetSort(opt.key as BudgetSort);
+                      }}
+                      className={`px-2 py-1 rounded-full ${isActive ? 'bg-primary' : 'bg-border'}`}
+                    >
+                      <Text
+                        className={`text-xs font-medium ${isActive ? 'text-white' : 'text-textSecondary'}`}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                {/* Direction toggle */}
+                <TouchableOpacity
+                  onPress={() => setSortAsc(v => !v)}
+                  className="w-7 h-7 rounded-full bg-border items-center justify-center"
+                >
+                  <Text className="text-textSecondary text-xs">{sortAsc ? '↑' : '↓'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Goals list */}
           {selectedTab === 'savings' ? (
             savingsGoals.length === 0 ? (
-              <View className="bg-card p-8 rounded-xl items-center">
+              <View className="bg-card p-8 rounded-xl items-center border border-border">
                 <Text className="text-4xl mb-3">💰</Text>
                 <Text className="text-textPrimary font-medium text-base mb-1">
                   No savings goals yet
                 </Text>
                 <Text className="text-textSecondary text-sm text-center">
-                  Set a goal to save for something special
+                  Tap above to set your first goal
                 </Text>
               </View>
             ) : (
-              savingsGoals.map(renderSavingsGoal)
+              [...savingsGoals]
+                .sort((a, b) => {
+                  const aProgress = getSavingsProgress(a.id);
+                  const bProgress = getSavingsProgress(b.id);
+                  const aComplete = aProgress >= a.targetAmount;
+                  const bComplete = bProgress >= b.targetAmount;
+                  // Completed always sink to bottom regardless of sort
+                  if (aComplete && !bComplete) return 1;
+                  if (!aComplete && bComplete) return -1;
+
+                  let result = 0;
+                  if (savingsSort === 'urgency') {
+                    if (!a.deadline && !b.deadline) result = 0;
+                    else if (!a.deadline) result = 1;
+                    else if (!b.deadline) result = -1;
+                    else result = new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                  } else if (savingsSort === 'progress') {
+                    const aPct = aProgress / a.targetAmount;
+                    const bPct = bProgress / b.targetAmount;
+                    result = aPct - bPct;
+                  } else if (savingsSort === 'amount') {
+                    result = a.targetAmount - b.targetAmount;
+                  }
+                  return sortAsc ? result : -result;
+                })
+                .map(renderSavingsGoal)
             )
           ) : budgetGoals.length === 0 ? (
-            <View className="bg-card p-8 rounded-xl items-center">
+            <View className="bg-card p-8 rounded-xl items-center border border-border">
               <Text className="text-4xl mb-3">📊</Text>
               <Text className="text-textPrimary font-medium text-base mb-1">No budgets set</Text>
               <Text className="text-textSecondary text-sm text-center">
-                Create budgets to control your spending
+                Tap above to create your first budget
               </Text>
             </View>
           ) : (
-            budgetGoals.map(renderBudgetGoal)
+            [...budgetGoals]
+              .sort((a, b) => {
+                const aSpent = getBudgetSpending(a.category || '', a.period);
+                const bSpent = getBudgetSpending(b.category || '', b.period);
+                let result = 0;
+                if (budgetSort === 'overspend') {
+                  result = bSpent / b.targetAmount - aSpent / a.targetAmount;
+                } else if (budgetSort === 'amount') {
+                  result = a.targetAmount - b.targetAmount;
+                } else if (budgetSort === 'name') {
+                  result = (a.category || '').localeCompare(b.category || '');
+                }
+                return sortAsc ? -result : result;
+              })
+              .map(renderBudgetGoal)
           )}
-
-          <TouchableOpacity
-            className="bg-white border-2 border-dashed border-border p-5 rounded-2xl items-center mt-3"
-            onPress={handleAddGoal}
-          >
-            <Text className="text-4xl mb-2">➕</Text>
-            <Text className="text-textPrimary font-medium text-base">
-              Add New {selectedTab === 'savings' ? 'Savings Goal' : 'Budget'}
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 

@@ -1,97 +1,90 @@
 // screens/DashboardScreen.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
-import { useGoals } from '../contexts/GoalContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp } from '../navigation/types';
 import GoalsSummaryWidget from '../components/GoalsSummaryWidget';
 import AppHeader from '../components/AppHeader';
+import TransactionRow from '../components/TransactionRow';
 
 export default function DashboardScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const { transactions, isLoading, deleteTransaction } = useTransactions();
   const { wallets } = useWallets();
-  const { goals } = useGoals();
   const { currency } = useSettings();
 
   if (isLoading) {
     return (
       <View className="flex-1 bg-background justify-center items-center">
         <ActivityIndicator size="large" color="#0891B2" />
-        <Text className="text-textSecondary mt-4">Loading transactions...</Text>
+        <Text className="text-textSecondary mt-4">Loading...</Text>
       </View>
     );
   }
 
   const now = new Date();
-  const currentMonthTransactions = transactions.filter(t => {
-    const tDate = new Date(t.date);
-    return tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
+
+  // ── All-time wallet balance (non-credit) ─────────────────────────────────
+  const getWalletBalance = (walletId: string) => {
+    const wallet = wallets.find(w => w.id === walletId);
+    if (!wallet) return 0;
+    return transactions.reduce((sum, t) => {
+      if (t.type === 'transfer') {
+        if (t.wallet === wallet.name) return sum - t.amount;
+        if (t.toWalletId === walletId) return sum + t.amount;
+        return sum;
+      }
+      if (t.wallet === wallet.name) return sum + t.amount;
+      return sum;
+    }, 0);
+  };
+
+  const nonCreditWallets = wallets.filter(w => (w.type ?? 'checking') !== 'credit');
+  const creditWallets = wallets.filter(w => (w.type ?? 'checking') === 'credit');
+  const totalBalance = nonCreditWallets.reduce((sum, w) => sum + getWalletBalance(w.id), 0);
+
+  // ── This month income / expense ──────────────────────────────────────────
+  const currentMonthTxns = transactions.filter(t => {
+    const d = new Date(t.date);
+    return (
+      t.type !== 'transfer' &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
   });
 
-  // Exclude transfers from income/expense summaries
-  const totalIncome = currentMonthTransactions
+  const totalIncome = currentMonthTxns
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpense = currentMonthTransactions
+  const totalExpense = currentMonthTxns
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
-  const totalBalance = totalIncome - totalExpense;
+  // ── Today's date label ───────────────────────────────────────────────────
+  const todayLabel = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+  const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+  const handleTransactionPress = (id: string) =>
+    navigation.navigate('TransactionDetails', { transactionId: id });
 
-    if (date.toDateString() === today.toDateString()) {
-      return `Today, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-    }
-    if (date.toDateString() === yesterday.toDateString()) {
-      return `Yesterday, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-    }
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
-
-  // Resolve transfer destination label
-  const getTransferLabel = (toWalletId?: string, toGoalId?: string) => {
-    if (toWalletId) {
-      const wallet = wallets.find(w => w.id === toWalletId);
-      return wallet ? `→ ${wallet.name}` : '→ Wallet';
-    }
-    if (toGoalId) {
-      const goal = goals.find(g => g.id === toGoalId);
-      return goal ? `→ ${goal.name}` : '→ Goal';
-    }
-    return 'Transfer';
-  };
-
-  const handleTransactionPress = (transactionId: string) => {
-    navigation.navigate('TransactionDetails', { transactionId });
-  };
-
-  const handleDelete = (transactionId: string, title: string) => {
-    Alert.alert('Delete Transaction', `Are you sure you want to delete "${title}"?`, [
+  const handleDelete = (id: string, title: string) => {
+    Alert.alert('Delete Transaction', `Delete "${title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteTransaction(transactionId);
-          } catch (error) {
+            await deleteTransaction(id);
+          } catch {
             Alert.alert('Error', 'Failed to delete transaction');
           }
         },
@@ -99,9 +92,9 @@ export default function DashboardScreen() {
     ]);
   };
 
-  const renderRightActions = (transactionId: string, title: string) => (
+  const renderRightActions = (id: string, title: string) => (
     <TouchableOpacity
-      onPress={() => handleDelete(transactionId, title)}
+      onPress={() => handleDelete(id, title)}
       className="bg-expense justify-center items-center px-6 p-4 mb-3 rounded-xl ml-2"
     >
       <Text className="text-white text-2xl">🗑️</Text>
@@ -111,38 +104,105 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView className="flex-1 bg-background">
-      <AppHeader
-        title="Expen$ense"
-        subtitle={new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-      >
-        <View className="mb-5">
-          <Text className="text-white/80 text-sm mb-1">Total Balance</Text>
-          <Text className="text-white text-4xl font-bold">
-            {currency.symbol}
-            {totalBalance.toFixed(2)}
-          </Text>
+      <AppHeader title="Expen$ense" subtitle={todayLabel}>
+        {/* Row 1 — Total Balance + Credit Owed side by side (no backgrounds) */}
+        <View className="flex-row items-end justify-between mb-5">
+          <View>
+            <Text className="text-white/70 text-xs mb-1 uppercase tracking-wide">
+              Total Balance
+            </Text>
+            <Text className="text-white text-4xl font-bold">
+              {currency.symbol}
+              {totalBalance.toFixed(2)}
+            </Text>
+          </View>
+          {creditWallets.length > 0 &&
+            (() => {
+              const totalOwed = creditWallets.reduce(
+                (sum, w) => sum + Math.abs(getWalletBalance(w.id)),
+                0
+              );
+              const totalAvailable = creditWallets.reduce((sum, w) => {
+                const b = getWalletBalance(w.id);
+                return sum + (w.creditLimit ? Math.max(w.creditLimit + b, 0) : 0);
+              }, 0);
+              return (
+                <View className="items-end">
+                  <Text className="text-white/70 text-xs mb-1 uppercase tracking-wide">
+                    Credit Owed{creditWallets.length > 1 ? ` (${creditWallets.length})` : ''}
+                  </Text>
+                  <Text className="text-white text-xl font-semibold">
+                    {currency.symbol}
+                    {totalOwed.toFixed(2)}
+                  </Text>
+                  {totalAvailable > 0 && (
+                    <Text className="text-white/50 text-xs mt-0.5">
+                      {currency.symbol}
+                      {totalAvailable.toFixed(0)} avail.
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
         </View>
 
+        {/* Row 2 — This month income / expense */}
+        <Text className="text-white/50 text-xs mb-2 uppercase tracking-wide">{monthLabel}</Text>
         <View className="flex-row gap-3">
-          <View className="flex-1 bg-white/15 p-4 rounded-xl">
-            <Text className="text-white/80 text-xs mb-1">Income</Text>
-            <Text className="text-white text-lg font-semibold">
+          <View className="flex-1 bg-white/15 p-4 rounded-2xl">
+            <Text className="text-white/70 text-xs mb-1">↑ Income</Text>
+            <Text className="text-white text-lg font-bold">
               {currency.symbol}
               {totalIncome.toFixed(2)}
             </Text>
           </View>
-          <View className="flex-1 bg-white/15 p-4 rounded-xl">
-            <Text className="text-white/80 text-xs mb-1">Expenses</Text>
-            <Text className="text-white text-lg font-semibold">
+          <View className="flex-1 bg-white/15 p-4 rounded-2xl">
+            <Text className="text-white/70 text-xs mb-1">↓ Expenses</Text>
+            <Text className="text-lg font-bold" style={{ color: '#FF4444' }}>
               {currency.symbol}
               {totalExpense.toFixed(2)}
             </Text>
           </View>
         </View>
+
+        {/* Credit card detail rows — only if multiple cards */}
+        {creditWallets.length > 1 && (
+          <View className="mt-3 pt-3 border-t border-white/20">
+            {creditWallets.map(wallet => {
+              const balance = getWalletBalance(wallet.id);
+              const owed = Math.abs(balance);
+              const available = wallet.creditLimit
+                ? Math.max(wallet.creditLimit + balance, 0)
+                : null;
+              return (
+                <View key={wallet.id} className="flex-row items-center justify-between mb-1">
+                  <View className="flex-row items-center gap-2">
+                    <Text style={{ fontSize: 14 }}>{wallet.icon}</Text>
+                    <Text className="text-white/90 text-sm font-medium">{wallet.name}</Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-white text-sm font-semibold">
+                      {currency.symbol}
+                      {owed.toFixed(2)} owed
+                    </Text>
+                    {available !== null && (
+                      <Text className="text-white/60 text-xs">
+                        {currency.symbol}
+                        {available.toFixed(0)} available
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </AppHeader>
 
+      {/* Goals summary */}
       <GoalsSummaryWidget />
 
+      {/* Recent transactions */}
       <View className="px-6 pb-6">
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-textPrimary text-lg font-semibold">Recent Transactions</Text>
@@ -162,52 +222,13 @@ export default function DashboardScreen() {
             </Text>
           </View>
         ) : (
-          transactions.slice(0, 10).map(transaction => (
+          transactions.slice(0, 5).map(transaction => (
             <Swipeable
               key={transaction.id}
               renderRightActions={() => renderRightActions(transaction.id, transaction.title)}
               overshootRight={false}
             >
-              <TouchableOpacity
-                onPress={() => handleTransactionPress(transaction.id)}
-                className="bg-card p-4 rounded-xl mb-3 flex-row justify-between items-center"
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 4,
-                  elevation: 2,
-                }}
-              >
-                <View className="flex-1">
-                  <Text className="text-textPrimary font-medium text-base mb-1">
-                    {transaction.title}
-                  </Text>
-                  <Text className="text-textSecondary text-xs">
-                    {transaction.type === 'transfer'
-                      ? getTransferLabel(transaction.toWalletId, transaction.toGoalId)
-                      : formatDate(transaction.date)}
-                  </Text>
-                </View>
-
-                <Text
-                  className={`text-base font-semibold ${
-                    transaction.type === 'income'
-                      ? 'text-income'
-                      : transaction.type === 'transfer'
-                        ? 'text-primary'
-                        : 'text-expense'
-                  }`}
-                >
-                  {transaction.type === 'income'
-                    ? '+'
-                    : transaction.type === 'transfer'
-                      ? '⇄ '
-                      : ''}
-                  {currency.symbol}
-                  {Math.abs(transaction.amount).toFixed(2)}
-                </Text>
-              </TouchableOpacity>
+              <TransactionRow transaction={transaction} onPress={handleTransactionPress} />
             </Swipeable>
           ))
         )}
