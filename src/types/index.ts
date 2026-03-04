@@ -12,6 +12,8 @@ export interface Transaction {
   notes?: string;
   toWalletId?: string; // if transferring to another wallet
   toGoalId?: string; // if transferring to a savings goal (earmarked)
+  hasTime?: boolean;
+  receiptUri?: string;
 }
 
 export type TransactionType = 'income' | 'expense' | 'transfer';

@@ -1,6 +1,8 @@
 // components/TransferToPicker.tsx
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWallets } from '../contexts/WalletContext';
 import { useGoals } from '../contexts/GoalContext';
 import { useTransactions } from '../contexts/TransactionContext';
@@ -31,24 +33,23 @@ export default function TransferToPicker({
   const { goals } = useGoals();
   const { transactions } = useTransactions();
   const { currency } = useSettings();
+  const insets = useSafeAreaInsets();
 
   const savingsGoals = goals.filter(g => g.type === 'savings');
   const availableWallets = wallets.filter(w => w.name !== excludeWalletName);
-
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
   const selectedGoal = goals.find(g => g.id === selectedGoalId);
+  const hasSelection = selectedWalletId !== '';
 
   const isSavingsWallet = (walletId: string) => {
-    const wallet = wallets.find(w => w.id === walletId);
-    return wallet ? SAVINGS_WALLET_TYPES.includes(wallet.type ?? 'checking') : false;
+    const w = wallets.find(w => w.id === walletId);
+    return w ? SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking') : false;
   };
 
-  // Derive goal progress from transactions
-  const getGoalProgress = (goalId: string) => {
-    return transactions
+  const getGoalProgress = (goalId: string) =>
+    transactions
       .filter(t => t.type === 'transfer' && t.toGoalId === goalId)
       .reduce((sum, t) => sum + t.amount, 0);
-  };
 
   const handleSelectWallet = (walletId: string) => {
     onSelectWallet(walletId);
@@ -86,268 +87,307 @@ export default function TransferToPicker({
     return 'Select destination';
   };
 
-  const getDisplayIcon = () => {
-    if (selectedGoal) return selectedGoal.icon;
-    if (selectedWallet) return selectedWallet.icon;
-    return '→';
-  };
-
-  const getDisplayColor = () => {
-    if (selectedWallet) return selectedWallet.color;
-    return '#64748B';
-  };
-
-  const hasSelection = selectedWalletId !== '';
+  const getDisplayIcon = () =>
+    selectedGoal ? selectedGoal.icon : selectedWallet ? selectedWallet.icon : '→';
+  const getDisplayColor = () => (selectedWallet ? selectedWallet.color : '#64748B');
 
   return (
-    <View className="px-6 py-4">
-      <Text className="text-textSecondary text-sm mb-3">To</Text>
+    <View>
+      <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
+        To <Text className="text-expense">*</Text>
+      </Text>
 
       <TouchableOpacity
-        className="bg-white rounded-2xl p-4 flex-row items-center justify-between"
         onPress={() => {
           setStep('destination');
           setModalVisible(true);
         }}
+        activeOpacity={0.7}
+        className="bg-card rounded-2xl px-4 flex-row items-center gap-3"
+        style={{
+          paddingVertical: 13,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 3,
+          elevation: 1,
+        }}
       >
-        <View className="flex-row items-center flex-1">
-          <View
-            className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-            style={{ backgroundColor: getDisplayColor() + '20' }}
-          >
-            <Text className="text-xl">{getDisplayIcon()}</Text>
-          </View>
-          <View className="flex-1">
-            <Text
-              className={`font-medium text-base ${hasSelection ? 'text-textPrimary' : 'text-textSecondary'}`}
-            >
-              {getDisplayLabel()}
-            </Text>
-            {selectedGoal && (
-              <Text className="text-textSecondary text-xs">Earmarked for {selectedGoal.name}</Text>
-            )}
-          </View>
+        <View
+          className="w-7 h-7 rounded-lg items-center justify-center"
+          style={{ backgroundColor: getDisplayColor() + '20' }}
+        >
+          <Text style={{ fontSize: 15 }}>{getDisplayIcon()}</Text>
         </View>
-        <Text className="text-textSecondary">›</Text>
+        <View className="flex-1">
+          <Text
+            className={`text-base font-medium ${hasSelection ? 'text-textPrimary' : 'text-slate-400'}`}
+          >
+            {getDisplayLabel()}
+          </Text>
+          {selectedGoal && (
+            <Text className="text-textSecondary text-xs mt-0.5">
+              Earmarked for {selectedGoal.name}
+            </Text>
+          )}
+        </View>
+        <Ionicons name="chevron-down" size={16} color="#CBD5E1" />
       </TouchableOpacity>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={handleClose}
-      >
+      <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={handleClose}>
         <Pressable className="flex-1 bg-black/50" onPress={handleClose}>
           <Pressable
-            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl"
+            className="absolute bottom-0 left-0 right-0 bg-background rounded-t-3xl"
             onPress={e => e.stopPropagation()}
           >
-            {/* STEP 1: Pick destination wallet */}
+            <View className="items-center pt-3 pb-1">
+              <View className="w-8 h-1 rounded-full bg-slate-300" />
+            </View>
+
+            {/* Step 1: Destination */}
             {step === 'destination' && (
               <>
-                <View className="px-6 py-4 border-b border-border">
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-textPrimary text-xl font-semibold">Transfer To</Text>
-                    <TouchableOpacity onPress={handleClose}>
-                      <Text className="text-primary text-lg font-medium">Done</Text>
-                    </TouchableOpacity>
-                  </View>
+                <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
+                  <Text
+                    className="text-textPrimary text-lg font-bold"
+                    style={{ letterSpacing: -0.3 }}
+                  >
+                    Transfer To
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleClose}
+                    className="w-8 h-8 rounded-full bg-slate-200 items-center justify-center"
+                  >
+                    <Ionicons name="close" size={16} color="#475569" />
+                  </TouchableOpacity>
                 </View>
 
-                <ScrollView className="max-h-96">
-                  <View className="px-6 py-4">
-                    {availableWallets.length === 0 ? (
-                      <View className="py-8 items-center">
-                        <Text className="text-4xl mb-3">🏦</Text>
-                        <Text className="text-textPrimary font-medium text-base mb-2">
-                          No destinations available
-                        </Text>
-                        <Text className="text-textSecondary text-sm text-center">
-                          Add another wallet first
-                        </Text>
-                      </View>
-                    ) : (
-                      <>
-                        {/* Savings wallets section */}
-                        {availableWallets.filter(w =>
-                          SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking')
-                        ).length > 0 && (
-                          <>
-                            <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wide mb-3">
-                              Savings Wallets
-                            </Text>
-                            {availableWallets
-                              .filter(w => SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking'))
-                              .map(wallet => (
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  style={{ maxHeight: 420 }}
+                  contentContainerStyle={{
+                    paddingHorizontal: 16,
+                    paddingBottom: insets.bottom + 20,
+                    gap: 4,
+                  }}
+                >
+                  {availableWallets.length === 0 ? (
+                    <View className="items-center py-10">
+                      <Text style={{ fontSize: 36, marginBottom: 10 }}>🏦</Text>
+                      <Text className="text-slate-600 text-base font-medium">
+                        No destinations available
+                      </Text>
+                      <Text className="text-slate-400 text-sm mt-1">Add another wallet first</Text>
+                    </View>
+                  ) : (
+                    <>
+                      {availableWallets.filter(w =>
+                        SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking')
+                      ).length > 0 && (
+                        <>
+                          <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider px-1 pb-1 pt-2">
+                            Savings Wallets
+                          </Text>
+                          {availableWallets
+                            .filter(w => SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking'))
+                            .map(wallet => {
+                              const isSelected = selectedWalletId === wallet.id;
+                              return (
                                 <TouchableOpacity
                                   key={wallet.id}
                                   onPress={() => handleSelectWallet(wallet.id)}
-                                  className={`flex-row items-center p-4 rounded-2xl mb-3 ${
-                                    selectedWalletId === wallet.id
-                                      ? 'bg-primary/10 border-2 border-primary'
-                                      : 'bg-background'
-                                  }`}
+                                  activeOpacity={0.65}
+                                  className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
+                                  style={{ paddingVertical: 11, gap: 14 }}
                                 >
                                   <View
-                                    className="w-12 h-12 rounded-xl items-center justify-center mr-3"
-                                    style={{ backgroundColor: wallet.color + '20' }}
+                                    className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : ''}`}
+                                    style={{
+                                      backgroundColor: isSelected ? undefined : wallet.color + '20',
+                                    }}
                                   >
-                                    <Text className="text-2xl">{wallet.icon}</Text>
+                                    <Text style={{ fontSize: 21 }}>{wallet.icon}</Text>
                                   </View>
                                   <View className="flex-1">
-                                    <Text className="text-textPrimary font-semibold text-base">
+                                    <Text
+                                      className={`text-base ${isSelected ? 'text-teal-700 font-semibold' : 'text-textPrimary'}`}
+                                    >
                                       {wallet.name}
                                     </Text>
-                                    <Text className="text-textSecondary text-xs capitalize">
+                                    <Text className="text-textSecondary text-xs capitalize mt-0.5">
                                       {wallet.type ?? 'savings'} wallet
+                                      {savingsGoals.length > 0 && ' · tap to pick goal'}
                                     </Text>
                                   </View>
-                                  {savingsGoals.length > 0 && (
-                                    <Text className="text-textSecondary text-xs mr-2">
-                                      Pick goal ›
-                                    </Text>
+                                  {isSelected ? (
+                                    <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
+                                      <Ionicons name="checkmark" size={13} color="#fff" />
+                                    </View>
+                                  ) : (
+                                    savingsGoals.length > 0 && (
+                                      <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
+                                    )
                                   )}
                                 </TouchableOpacity>
-                              ))}
-                          </>
-                        )}
+                              );
+                            })}
+                        </>
+                      )}
 
-                        {/* Other wallets section */}
-                        {availableWallets.filter(
-                          w => !SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking')
-                        ).length > 0 && (
-                          <>
-                            <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wide mb-3 mt-2">
-                              Other Wallets
-                            </Text>
-                            {availableWallets
-                              .filter(w => !SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking'))
-                              .map(wallet => (
+                      {availableWallets.filter(
+                        w => !SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking')
+                      ).length > 0 && (
+                        <>
+                          <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider px-1 pb-1 pt-2">
+                            Other Wallets
+                          </Text>
+                          {availableWallets
+                            .filter(w => !SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking'))
+                            .map(wallet => {
+                              const isSelected = selectedWalletId === wallet.id;
+                              return (
                                 <TouchableOpacity
                                   key={wallet.id}
                                   onPress={() => handleSelectWallet(wallet.id)}
-                                  className={`flex-row items-center p-4 rounded-2xl mb-3 ${
-                                    selectedWalletId === wallet.id
-                                      ? 'bg-primary/10 border-2 border-primary'
-                                      : 'bg-background'
-                                  }`}
+                                  activeOpacity={0.65}
+                                  className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
+                                  style={{ paddingVertical: 11, gap: 14 }}
                                 >
                                   <View
-                                    className="w-12 h-12 rounded-xl items-center justify-center mr-3"
-                                    style={{ backgroundColor: wallet.color + '20' }}
+                                    className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : ''}`}
+                                    style={{
+                                      backgroundColor: isSelected ? undefined : wallet.color + '20',
+                                    }}
                                   >
-                                    <Text className="text-2xl">{wallet.icon}</Text>
+                                    <Text style={{ fontSize: 21 }}>{wallet.icon}</Text>
                                   </View>
                                   <View className="flex-1">
-                                    <Text className="text-textPrimary font-semibold text-base">
+                                    <Text
+                                      className={`text-base ${isSelected ? 'text-teal-700 font-semibold' : 'text-textPrimary'}`}
+                                    >
                                       {wallet.name}
                                     </Text>
-                                    <Text className="text-textSecondary text-xs capitalize">
+                                    <Text className="text-textSecondary text-xs capitalize mt-0.5">
                                       {wallet.type ?? 'checking'} wallet
                                     </Text>
                                   </View>
-                                  {selectedWalletId === wallet.id && (
-                                    <Text className="text-primary text-2xl">✓</Text>
+                                  {isSelected && (
+                                    <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
+                                      <Ionicons name="checkmark" size={13} color="#fff" />
+                                    </View>
                                   )}
                                 </TouchableOpacity>
-                              ))}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </View>
+                              );
+                            })}
+                        </>
+                      )}
+                    </>
+                  )}
                 </ScrollView>
               </>
             )}
 
-            {/* STEP 2: Pick goal for savings wallets */}
+            {/* Step 2: Goal */}
             {step === 'goal' && (
               <>
-                <View className="px-6 py-4 border-b border-border">
-                  <View className="flex-row items-center justify-between">
-                    <TouchableOpacity onPress={() => setStep('destination')}>
-                      <Text className="text-primary text-lg">‹ Back</Text>
-                    </TouchableOpacity>
-                    <Text className="text-textPrimary text-xl font-semibold">Which Goal?</Text>
-                    <TouchableOpacity onPress={handleSkipGoal}>
-                      <Text className="text-textSecondary text-lg">Skip</Text>
-                    </TouchableOpacity>
+                <View className="flex-row items-center justify-between px-6 pt-2 pb-2">
+                  <TouchableOpacity
+                    onPress={() => setStep('destination')}
+                    className="w-8 h-8 rounded-full bg-slate-200 items-center justify-center"
+                  >
+                    <Ionicons name="chevron-back" size={16} color="#475569" />
+                  </TouchableOpacity>
+                  <View className="items-center">
+                    <Text
+                      className="text-textPrimary text-lg font-bold"
+                      style={{ letterSpacing: -0.3 }}
+                    >
+                      Which Goal?
+                    </Text>
+                    <Text className="text-textSecondary text-xs mt-0.5">
+                      Saving toward something specific?
+                    </Text>
                   </View>
-                  <Text className="text-textSecondary text-sm text-center mt-2">
-                    Is this saving toward a specific goal?
-                  </Text>
+                  <TouchableOpacity onPress={handleSkipGoal}>
+                    <Text className="text-textSecondary text-sm font-medium">Skip</Text>
+                  </TouchableOpacity>
                 </View>
 
-                <ScrollView className="max-h-96">
-                  <View className="px-6 py-4">
-                    {savingsGoals.map(goal => {
-                      const saved = getGoalProgress(goal.id);
-                      const remaining = goal.targetAmount - saved;
-                      const progress = Math.min((saved / goal.targetAmount) * 100, 100);
-                      const isComplete = saved >= goal.targetAmount;
-
-                      return (
-                        <TouchableOpacity
-                          key={goal.id}
-                          onPress={() => handleSelectGoal(goal.id)}
-                          className={`flex-row items-center p-4 rounded-2xl mb-3 ${
-                            selectedGoalId === goal.id
-                              ? 'bg-primary/10 border-2 border-primary'
-                              : 'bg-background'
-                          }`}
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  style={{ maxHeight: 420 }}
+                  contentContainerStyle={{
+                    paddingHorizontal: 16,
+                    paddingBottom: insets.bottom + 20,
+                    gap: 4,
+                    paddingTop: 8,
+                  }}
+                >
+                  {savingsGoals.map(goal => {
+                    const saved = getGoalProgress(goal.id);
+                    const remaining = goal.targetAmount - saved;
+                    const progress = Math.min((saved / goal.targetAmount) * 100, 100);
+                    const isComplete = saved >= goal.targetAmount;
+                    const isSelected = selectedGoalId === goal.id;
+                    return (
+                      <TouchableOpacity
+                        key={goal.id}
+                        onPress={() => handleSelectGoal(goal.id)}
+                        activeOpacity={0.65}
+                        className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
+                        style={{ paddingVertical: 11, gap: 14 }}
+                      >
+                        <View
+                          className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : ''}`}
+                          style={{ backgroundColor: isSelected ? undefined : goal.color + '20' }}
                         >
-                          <View
-                            className="w-12 h-12 rounded-xl items-center justify-center mr-3"
-                            style={{ backgroundColor: goal.color + '20' }}
+                          <Text style={{ fontSize: 21 }}>{goal.icon}</Text>
+                        </View>
+                        <View className="flex-1 gap-1">
+                          <Text
+                            className={`text-base ${isSelected ? 'text-teal-700 font-semibold' : 'text-textPrimary'}`}
                           >
-                            <Text className="text-2xl">{goal.icon}</Text>
-                          </View>
-                          <View className="flex-1">
-                            <Text className="text-textPrimary font-semibold text-base">
-                              {goal.name}
-                            </Text>
-                            <View className="flex-row items-center gap-2 mt-1">
-                              {/* Mini progress bar */}
-                              <View className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
-                                <View
-                                  className="h-full rounded-full"
-                                  style={{ width: `${progress}%`, backgroundColor: goal.color }}
-                                />
-                              </View>
-                              <Text className="text-textSecondary text-xs">
-                                {isComplete
-                                  ? '🎉 Done'
-                                  : `${currency.symbol}${remaining.toFixed(0)} left`}
-                              </Text>
+                            {goal.name}
+                          </Text>
+                          <View className="flex-row items-center gap-2">
+                            <View className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+                              <View
+                                className="h-full rounded-full"
+                                style={{ width: `${progress}%`, backgroundColor: goal.color }}
+                              />
                             </View>
+                            <Text className="text-textSecondary text-xs">
+                              {isComplete
+                                ? '🎉 Done'
+                                : `${currency.symbol}${remaining.toFixed(0)} left`}
+                            </Text>
                           </View>
-                          {selectedGoalId === goal.id && (
-                            <Text className="text-primary text-2xl ml-2">✓</Text>
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
+                        </View>
+                        {isSelected && (
+                          <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
+                            <Ionicons name="checkmark" size={13} color="#fff" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
 
-                    {/* No specific goal option */}
-                    <TouchableOpacity
-                      onPress={handleSkipGoal}
-                      className={`flex-row items-center p-4 rounded-2xl mb-3 ${
-                        hasSelection && !selectedGoalId
-                          ? 'bg-primary/10 border-2 border-primary'
-                          : 'bg-background'
-                      }`}
-                    >
-                      <View className="w-12 h-12 rounded-xl items-center justify-center mr-3 bg-border">
-                        <Text className="text-2xl">💰</Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-textPrimary font-semibold text-base">
-                          No specific goal
-                        </Text>
-                        <Text className="text-textSecondary text-xs">Just saving generally</Text>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    onPress={handleSkipGoal}
+                    activeOpacity={0.65}
+                    className={`flex-row items-center px-4 rounded-2xl ${hasSelection && !selectedGoalId ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
+                    style={{ paddingVertical: 11, gap: 14 }}
+                  >
+                    <View className="w-10 h-10 rounded-xl bg-slate-100 items-center justify-center">
+                      <Text style={{ fontSize: 21 }}>💰</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-textPrimary text-base">No specific goal</Text>
+                      <Text className="text-textSecondary text-xs mt-0.5">
+                        Just saving generally
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 </ScrollView>
               </>
             )}

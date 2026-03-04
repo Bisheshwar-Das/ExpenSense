@@ -1,13 +1,20 @@
 // screens/TransactionDetailsScreen.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTransactions } from '../contexts/TransactionContext';
 import { useWallets } from '../contexts/WalletContext';
 import { useGoals } from '../contexts/GoalContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp, TransactionDetailsRouteProp } from '../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const TYPE_CONFIG = {
+  expense: { color: '#EF4444', bgClass: 'bg-expense', label: 'Expense', symbol: '−' },
+  income: { color: '#22C55E', bgClass: 'bg-income', label: 'Income', symbol: '+' },
+  transfer: { color: '#14B8A6', bgClass: 'bg-primary', label: 'Transfer', symbol: '⇄' },
+} as const;
 
 export default function TransactionDetailsScreen() {
   const navigation = useNavigation<RootNavigationProp>();
@@ -24,10 +31,10 @@ export default function TransactionDetailsScreen() {
   if (!transaction) {
     return (
       <View className="flex-1 bg-background justify-center items-center">
-        <Text className="text-textSecondary text-lg">Transaction not found</Text>
+        <Text className="text-textSecondary text-base mb-4">Transaction not found</Text>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          className="mt-4 bg-primary px-6 py-3 rounded-xl"
+          className="bg-primary px-6 py-3 rounded-2xl"
         >
           <Text className="text-white font-semibold">Go Back</Text>
         </TouchableOpacity>
@@ -36,6 +43,7 @@ export default function TransactionDetailsScreen() {
   }
 
   const isTransfer = transaction.type === 'transfer';
+  const config = TYPE_CONFIG[transaction.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.expense;
 
   const fromWallet = wallets.find(w => w.name === transaction.wallet);
   const toWallet = transaction.toWalletId
@@ -43,20 +51,18 @@ export default function TransactionDetailsScreen() {
     : null;
   const toGoal = transaction.toGoalId ? goals.find(g => g.id === transaction.toGoalId) : null;
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (s: string) =>
+    new Date(s).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
     });
-  };
+  const formatTime = (s: string) =>
+    new Date(s).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   const handleDelete = () => {
-    Alert.alert('Delete Transaction', 'Are you sure? This action cannot be undone.', [
+    Alert.alert('Delete Transaction', 'This action cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -64,135 +70,211 @@ export default function TransactionDetailsScreen() {
         onPress: async () => {
           try {
             await deleteTransaction(transaction.id);
-            Alert.alert('Deleted', 'Transaction deleted', [
-              { text: 'OK', onPress: () => navigation.goBack() },
-            ]);
-          } catch (error) {
-            Alert.alert('Error', 'Failed to delete transaction');
+            navigation.goBack();
+          } catch {
+            Alert.alert('Error', 'Failed to delete transaction.');
           }
         },
       },
     ]);
   };
 
-  const handleEdit = () => {
-    navigation.navigate('EditTransaction', { transactionId: transaction.id });
-  };
-
-  // Amount display config based on type
-  const amountColor = isTransfer
-    ? 'text-primary'
-    : transaction.type === 'income'
-      ? 'text-income'
-      : 'text-expense';
-
-  const amountPrefix = isTransfer ? '⇄ ' : transaction.type === 'income' ? '+' : '-';
-
-  const typeBadgeColor = isTransfer
-    ? 'bg-primary/10'
-    : transaction.type === 'income'
-      ? 'bg-income/10'
-      : 'bg-expense/10';
-
-  const typeBadgeText = isTransfer
-    ? 'text-primary'
-    : transaction.type === 'income'
-      ? 'text-income'
-      : 'text-expense';
-
-  const typeLabel = isTransfer ? 'Transfer' : transaction.type === 'income' ? 'Income' : 'Expense';
-
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
       <View
-        className="bg-primary px-6 py-4 border-b border-border"
-        style={{ paddingTop: insets.top + 8 }}
+        style={{
+          backgroundColor: config.color,
+          paddingTop: insets.top + 8,
+          paddingBottom: 20,
+          paddingHorizontal: 24,
+        }}
       >
         <View className="flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text className="text-white text-lg">← Back</Text>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-semibold">Transaction Details</Text>
-          <View style={{ width: 60 }} />
+          <Text className="text-white text-lg font-bold" style={{ letterSpacing: -0.3 }}>
+            Details
+          </Text>
+          {!isTransfer ? (
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('EditTransaction', { transactionId: transaction.id })
+              }
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text className="text-white/90 text-base font-semibold">Edit</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
         </View>
       </View>
 
-      <ScrollView className="flex-1">
-        {/* Amount Card */}
-        <View className="bg-white px-6 py-8 items-center border-b border-border">
-          <Text className="text-textSecondary text-sm mb-2">Amount</Text>
-          <Text className={`text-5xl font-bold ${amountColor}`}>
-            {amountPrefix}
+      {/* Hero amount */}
+      <View style={{ backgroundColor: config.color }}>
+        <View className="items-center pb-9 pt-1">
+          <Text className="text-white/70 text-sm mb-1">{config.label}</Text>
+          <Text className="text-white font-extrabold" style={{ fontSize: 52, letterSpacing: -1 }}>
+            {config.symbol}
             {currency.symbol}
             {Math.abs(transaction.amount).toFixed(2)}
           </Text>
-          <View className={`mt-3 px-4 py-1 rounded-full ${typeBadgeColor}`}>
-            <Text className={`text-sm font-medium ${typeBadgeText}`}>{typeLabel}</Text>
-          </View>
+          <Text className="text-white/65 text-sm mt-2">{transaction.title}</Text>
         </View>
+        {/* Curve */}
+        <View className="bg-background rounded-t-3xl" style={{ height: 28 }} />
+      </View>
 
-        <View className="p-6">
-          <DetailRow label="Description" value={transaction.title} />
-          <DetailRow label="Date & Time" value={formatDate(transaction.date)} />
-
-          {/* Transfer-specific rows */}
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 100 }}
+      >
+        {/* Main details card */}
+        <View
+          className="bg-card rounded-2xl overflow-hidden"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 3,
+            elevation: 1,
+          }}
+        >
+          <DetailRow icon="calendar-outline" label="Date" value={formatDate(transaction.date)} />
+          {transaction.hasTime && (
+            <>
+              <Divider />
+              <DetailRow icon="time-outline" label="Time" value={formatTime(transaction.date)} />
+            </>
+          )}
           {isTransfer ? (
             <>
+              <Divider />
               <DetailRow
+                icon="wallet-outline"
                 label="From"
-                value={fromWallet ? `${fromWallet.icon} ${fromWallet.name}` : transaction.wallet}
+                value={fromWallet ? `${fromWallet.icon}  ${fromWallet.name}` : transaction.wallet}
               />
               {toWallet && (
-                <DetailRow label="To Wallet" value={`${toWallet.icon} ${toWallet.name}`} />
+                <>
+                  <Divider />
+                  <DetailRow
+                    icon="arrow-forward-outline"
+                    label="To Wallet"
+                    value={`${toWallet.icon}  ${toWallet.name}`}
+                  />
+                </>
               )}
               {toGoal && (
-                <DetailRow label="Earmarked For" value={`${toGoal.icon} ${toGoal.name}`} />
+                <>
+                  <Divider />
+                  <DetailRow
+                    icon="flag-outline"
+                    label="Earmarked For"
+                    value={`${toGoal.icon}  ${toGoal.name}`}
+                  />
+                </>
               )}
-              {!toWallet && !toGoal && <DetailRow label="To" value="Unknown destination" />}
+              {!toWallet && !toGoal && (
+                <>
+                  <Divider />
+                  <DetailRow icon="help-circle-outline" label="To" value="Unknown destination" />
+                </>
+              )}
             </>
           ) : (
             <>
-              <DetailRow label="Category" value={transaction.category} />
-              <DetailRow label="Wallet" value={transaction.wallet} />
+              <Divider />
+              <DetailRow icon="grid-outline" label="Category" value={transaction.category} />
+              <Divider />
+              <DetailRow
+                icon="wallet-outline"
+                label="Wallet"
+                value={fromWallet ? `${fromWallet.icon}  ${fromWallet.name}` : transaction.wallet}
+              />
             </>
           )}
-
-          {transaction.notes && (
-            <View className="bg-white p-4 rounded-2xl mb-3">
-              <Text className="text-textSecondary text-sm mb-2">Notes</Text>
-              <Text className="text-textPrimary text-base leading-6">{transaction.notes}</Text>
-            </View>
-          )}
         </View>
+
+        {/* Notes */}
+        {transaction.notes ? (
+          <View className="mt-3">
+            <SectionLabel label="Notes" />
+            <View
+              className="bg-card rounded-2xl"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 3,
+                elevation: 1,
+              }}
+            >
+              <Text className="text-textPrimary text-base leading-6 p-4">{transaction.notes}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* Attachment */}
+        {transaction.receiptUri ? (
+          <View className="mt-3">
+            <SectionLabel label="Attachment" />
+            <Image
+              source={{ uri: transaction.receiptUri }}
+              className="w-full rounded-2xl"
+              style={{ height: 200 }}
+              resizeMode="cover"
+            />
+          </View>
+        ) : null}
       </ScrollView>
 
-      {/* Action Buttons */}
-      <View className="bg-white px-6 py-4 border-t border-border">
-        <View className="flex-row gap-3">
-          <TouchableOpacity
-            onPress={handleDelete}
-            className="flex-1 py-4 rounded-2xl bg-expense/10 border border-expense/20"
-          >
-            <Text className="text-center font-semibold text-lg text-expense">🗑️ Delete</Text>
-          </TouchableOpacity>
-          {/* Only show edit for non-transfers — editing transfers is complex */}
-          {!isTransfer && (
-            <TouchableOpacity onPress={handleEdit} className="flex-1 py-4 rounded-2xl bg-primary">
-              <Text className="text-center font-semibold text-lg text-white">✏️ Edit</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+      {/* Delete button */}
+      <View
+        className="absolute bottom-0 left-0 right-0 bg-card border-t border-border px-4 pt-3"
+        style={{ paddingBottom: insets.bottom + 12 }}
+      >
+        <TouchableOpacity
+          onPress={handleDelete}
+          activeOpacity={0.7}
+          className="bg-expense/10 rounded-2xl py-4 flex-row items-center justify-center gap-2"
+        >
+          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Text className="text-expense font-bold text-base">Delete Transaction</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function SectionLabel({ label }: { label: string }) {
   return (
-    <View className="bg-white p-4 rounded-2xl mb-3">
-      <Text className="text-textSecondary text-sm mb-1">{label}</Text>
-      <Text className="text-textPrimary text-base font-medium">{value}</Text>
+    <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
+      {label}
+    </Text>
+  );
+}
+
+function Divider() {
+  return <View className="h-px bg-border mx-4" />;
+}
+
+function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 13 }}>
+      <Ionicons name={icon as any} size={18} color="#94A3B8" />
+      <View className="flex-1">
+        <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-0.5">
+          {label}
+        </Text>
+        <Text className="text-textPrimary text-base font-medium">{value}</Text>
+      </View>
     </View>
   );
 }
