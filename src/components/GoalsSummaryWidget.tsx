@@ -65,8 +65,8 @@ export default function GoalsSummaryWidget() {
   };
 
   return (
-    <View className="px-6 pb-4">
-      <View className="flex-row items-center justify-between mb-3">
+    <View className="px-6 p-4">
+      <View className="flex-row items-center justify-between mb-1">
         <Text className="text-textPrimary text-lg font-semibold">🎯 Goals Overview</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
           <Text className="text-primary font-medium text-sm">View All →</Text>
@@ -74,13 +74,13 @@ export default function GoalsSummaryWidget() {
       </View>
 
       <View
-        className="bg-card rounded-2xl overflow-hidden"
+        className="bg-card rounded-2xl"
         style={{
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
-          elevation: 2,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 6,
+          elevation: 3,
         }}
       >
         {/* Over-budget alerts */}

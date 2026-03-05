@@ -1,5 +1,5 @@
 // screens/EditTransactionScreen.tsx
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
+  Pressable,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, Category } from '../types';
@@ -23,9 +26,8 @@ import TransferToPicker from '../components/TransferToPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Modal, Pressable } from 'react-native';
-import { Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import AppHeader from '@/components/AppHeader';
 
 type FullTransactionType = 'expense' | 'income' | 'transfer';
 
@@ -71,8 +73,8 @@ export default function EditTransactionScreen() {
   const [type, setType] = useState<FullTransactionType>('expense');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedWallet, setSelectedWallet] = useState('');
-  const [toWalletId, setToWalletId] = useState('');
-  const [toGoalId, setToGoalId] = useState('');
+  // Single state object for transfer dest to avoid batching issues
+  const [transferDest, setTransferDest] = useState({ toWalletId: '', toGoalId: '' });
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date());
   const [hasTime, setHasTime] = useState(false);
@@ -91,8 +93,10 @@ export default function EditTransactionScreen() {
     setSelectedWallet(transaction.wallet);
     setDate(new Date(transaction.date));
     setHasTime(transaction.hasTime || false);
-    setToWalletId(transaction.toWalletId || '');
-    setToGoalId(transaction.toGoalId || '');
+    setTransferDest({
+      toWalletId: transaction.toWalletId || '',
+      toGoalId: transaction.toGoalId || '',
+    });
     setAttachmentUri(transaction.receiptUri || null);
     if (transaction.type !== 'transfer') {
       const cats = transaction.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -114,15 +118,14 @@ export default function EditTransactionScreen() {
 
   const isValid = useMemo(() => {
     const base = title.trim() !== '' && amount !== '' && parseFloat(amount) > 0;
-    if (type === 'transfer') return base && (toWalletId !== '' || toGoalId !== '');
+    if (type === 'transfer') return base;
     return base && selectedCategory !== null;
-  }, [title, amount, type, selectedCategory, toWalletId, toGoalId]);
+  }, [title, amount, type, selectedCategory]);
 
   const handleTypeChange = (newType: FullTransactionType) => {
     setType(newType);
     setSelectedCategory(null);
-    setToWalletId('');
-    setToGoalId('');
+    setTransferDest({ toWalletId: '', toGoalId: '' });
   };
 
   const handleRemoveTime = () => {
@@ -178,8 +181,8 @@ export default function EditTransactionScreen() {
         hasTime,
         wallet: selectedWallet,
         notes,
-        toWalletId: type === 'transfer' ? toWalletId || undefined : undefined,
-        toGoalId: type === 'transfer' ? toGoalId || undefined : undefined,
+        toWalletId: type === 'transfer' ? transferDest.toWalletId || undefined : undefined,
+        toGoalId: type === 'transfer' ? transferDest.toGoalId || undefined : undefined,
         receiptUri: attachmentUri ?? undefined,
       });
       navigation.goBack();
@@ -196,44 +199,14 @@ export default function EditTransactionScreen() {
       className="flex-1 bg-background"
     >
       {/* Header */}
-      <View
-        style={{
-          backgroundColor: config.color,
-          paddingTop: insets.top + 8,
-          paddingBottom: 20,
-          paddingHorizontal: 24,
-        }}
-      >
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text className="text-white/85 text-base">Cancel</Text>
-          </TouchableOpacity>
-          <Text className="text-white text-lg font-bold" style={{ letterSpacing: -0.3 }}>
-            Edit Transaction
-          </Text>
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={!isValid || isSaving}
-            className="rounded-full px-4 py-1.5"
-            style={{
-              backgroundColor: isValid ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-            }}
-          >
-            {isSaving ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text
-                className={`font-semibold text-base ${isValid ? 'text-white' : 'text-white/40'}`}
-              >
-                Save
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+      <AppHeader
+        title="Edit Transaction"
+        onBack={() => navigation.goBack()}
+        onEdit={handleSave}
+        editLabel="Save"
+        hideMenu
+        backgroundColor={config.color}
+      />
 
       <ScrollView
         ref={scrollRef}
@@ -364,17 +337,13 @@ export default function EditTransactionScreen() {
           {/* Transfer destination */}
           {type === 'transfer' && (
             <TransferToPicker
-              selectedWalletId={toWalletId}
-              selectedGoalId={toGoalId}
+              selectedWalletId={transferDest.toWalletId}
+              selectedGoalId={transferDest.toGoalId}
               excludeWalletName={selectedWallet}
-              onSelectWallet={v => {
-                setToWalletId(v);
-                setToGoalId('');
-              }}
-              onSelectGoal={v => {
-                setToGoalId(v);
-                setToWalletId('');
-              }}
+              onSelectWallet={v => setTransferDest({ toWalletId: v, toGoalId: '' })}
+              onSelectGoal={v =>
+                setTransferDest(prev => ({ toWalletId: prev.toWalletId, toGoalId: v }))
+              }
             />
           )}
 
@@ -405,9 +374,7 @@ export default function EditTransactionScreen() {
                 <Text className="flex-1 text-textPrimary text-base">{formatDate(date)}</Text>
                 <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
               </TouchableOpacity>
-
               <View className="h-px bg-border mx-4" />
-
               {hasTime ? (
                 <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 13 }}>
                   <Ionicons name="time-outline" size={18} color="#14B8A6" />
@@ -536,9 +503,6 @@ export default function EditTransactionScreen() {
               {(!amount || parseFloat(amount) <= 0) && <MissingChip label="Amount" />}
               {!title.trim() && <MissingChip label="Description" />}
               {type !== 'transfer' && !selectedCategory && <MissingChip label="Category" />}
-              {type === 'transfer' && !toWalletId && !toGoalId && (
-                <MissingChip label="Transfer destination" />
-              )}
             </View>
           )}
 

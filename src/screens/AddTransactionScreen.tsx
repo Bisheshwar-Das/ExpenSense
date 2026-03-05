@@ -27,8 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
+import AppHeader from '@/components/AppHeader';
 
 export type FullTransactionType = 'expense' | 'income' | 'transfer';
 
@@ -56,8 +55,6 @@ const TYPE_CONFIG = {
   },
 } as const;
 
-// ─── Reducer ──────────────────────────────────────────────────────────────────
-
 interface FormState {
   title: string;
   amount: string;
@@ -75,6 +72,7 @@ interface FormState {
 type FormAction =
   | { type: 'SET_FIELD'; field: keyof FormState; value: FormState[keyof FormState] }
   | { type: 'SET_TYPE'; value: FullTransactionType }
+  | { type: 'SET_TRANSFER_DEST'; toWalletId: string; toGoalId: string }
   | { type: 'RESET'; defaultWallet: string };
 
 function formReducer(state: FormState, action: FormAction): FormState {
@@ -83,6 +81,8 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return { ...state, [action.field]: action.value };
     case 'SET_TYPE':
       return { ...state, type: action.value, selectedCategory: null, toWalletId: '', toGoalId: '' };
+    case 'SET_TRANSFER_DEST':
+      return { ...state, toWalletId: action.toWalletId, toGoalId: action.toGoalId };
     case 'RESET':
       return {
         title: '',
@@ -99,8 +99,6 @@ function formReducer(state: FormState, action: FormAction): FormState {
       };
   }
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 interface SavedSnapshot {
   amount: string;
@@ -125,8 +123,6 @@ const formatDate = (d: Date) =>
   });
 const formatTime = (d: Date) =>
   d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AddTransactionScreen() {
   const navigation = useNavigation();
@@ -192,7 +188,7 @@ export default function AddTransactionScreen() {
 
   const isValid = useMemo(() => {
     const base = form.title.trim() !== '' && form.amount !== '' && parseFloat(form.amount) > 0;
-    if (form.type === 'transfer') return base && (form.toWalletId !== '' || form.toGoalId !== '');
+    if (form.type === 'transfer') return base;
     return base && form.selectedCategory !== null;
   }, [form]);
 
@@ -301,47 +297,17 @@ export default function AddTransactionScreen() {
       className="flex-1 bg-background"
     >
       {/* Header */}
-      <View
-        style={{
-          backgroundColor: config.color,
-          paddingTop: insets.top + 8,
-          paddingBottom: 20,
-          paddingHorizontal: 24,
+      <AppHeader
+        title="Add Transaction"
+        onBack={() => {
+          dispatch({ type: 'RESET', defaultWallet });
+          navigation.goBack();
         }}
-      >
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => {
-              dispatch({ type: 'RESET', defaultWallet });
-              navigation.goBack();
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text className="text-white/85 text-base">Cancel</Text>
-          </TouchableOpacity>
-          <Text className="text-white text-lg font-bold" style={{ letterSpacing: -0.3 }}>
-            Add Transaction
-          </Text>
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={!isValid || isSaving}
-            className="rounded-full px-4 py-1.5"
-            style={{
-              backgroundColor: isValid ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-            }}
-          >
-            {isSaving ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text
-                className={`font-semibold text-base ${isValid ? 'text-white' : 'text-white/40'}`}
-              >
-                Save
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+        onEdit={handleSave}
+        editLabel="Save"
+        hideMenu
+        backgroundColor={config.color}
+      />
 
       <ScrollView
         ref={scrollRef}
@@ -479,14 +445,12 @@ export default function AddTransactionScreen() {
               selectedWalletId={form.toWalletId}
               selectedGoalId={form.toGoalId}
               excludeWalletName={form.selectedWallet}
-              onSelectWallet={v => {
-                setField('toWalletId', v);
-                setField('toGoalId', '');
-              }}
-              onSelectGoal={v => {
-                setField('toGoalId', v);
-                setField('toWalletId', '');
-              }}
+              onSelectWallet={v =>
+                dispatch({ type: 'SET_TRANSFER_DEST', toWalletId: v, toGoalId: '' })
+              }
+              onSelectGoal={v =>
+                dispatch({ type: 'SET_TRANSFER_DEST', toWalletId: form.toWalletId, toGoalId: v })
+              }
             />
           )}
 
@@ -517,9 +481,7 @@ export default function AddTransactionScreen() {
                 <Text className="flex-1 text-textPrimary text-base">{formatDate(form.date)}</Text>
                 <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
               </TouchableOpacity>
-
               <View className="h-px bg-border mx-4" />
-
               {form.hasTime ? (
                 <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 13 }}>
                   <Ionicons name="time-outline" size={18} color="#14B8A6" />
@@ -649,9 +611,6 @@ export default function AddTransactionScreen() {
               {!form.title.trim() && <MissingChip label="Description" />}
               {form.type !== 'transfer' && !form.selectedCategory && (
                 <MissingChip label="Category" />
-              )}
-              {form.type === 'transfer' && !form.toWalletId && !form.toGoalId && (
-                <MissingChip label="Transfer destination" />
               )}
             </View>
           )}
@@ -813,7 +772,6 @@ export default function AddTransactionScreen() {
                 {snapshotConfig.label} recorded successfully
               </Text>
             </View>
-
             <View
               className="rounded-2xl items-center py-5 mb-7"
               style={{ backgroundColor: snapshotConfig.bg }}
@@ -830,7 +788,6 @@ export default function AddTransactionScreen() {
                 {snapshot?.title}
               </Text>
             </View>
-
             <View className="gap-2.5">
               <TouchableOpacity
                 onPress={handleAddAnother}
@@ -851,8 +808,6 @@ export default function AddTransactionScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function MissingChip({ label }: { label: string }) {
   return (

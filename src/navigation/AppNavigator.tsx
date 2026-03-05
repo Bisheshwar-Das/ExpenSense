@@ -19,6 +19,7 @@ import TransactionsScreen from '../screens/TransactionsScreen';
 
 // Import types
 import { RootStackParamList, TabParamList } from './types';
+import WalletDetailScreen from '@/screens/WalletDetailScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -146,6 +147,11 @@ export default function AppNavigator() {
             options={{
               headerShown: false,
             }}
+          />
+          <Stack.Screen
+            name="WalletDetail"
+            component={WalletDetailScreen}
+            options={{ headerShown: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>

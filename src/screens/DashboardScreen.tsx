@@ -104,7 +104,7 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView className="flex-1 bg-background">
-      <AppHeader title="Expen$ense" subtitle={todayLabel}>
+      <AppHeader title="Expen$ense" subtitle={todayLabel} titleAlign="left">
         {/* Row 1 — Total Balance + Credit Owed side by side (no backgrounds) */}
         <View className="flex-row items-end justify-between mb-5">
           <View>
@@ -158,7 +158,7 @@ export default function DashboardScreen() {
           </View>
           <View className="flex-1 bg-white/15 p-4 rounded-2xl">
             <Text className="text-white/70 text-xs mb-1">↓ Expenses</Text>
-            <Text className="text-lg font-bold" style={{ color: '#FF4444' }}>
+            <Text className="text-lg font-bold" style={{ color: '#ff0808' }}>
               {currency.symbol}
               {totalExpense.toFixed(2)}
             </Text>
@@ -204,11 +204,11 @@ export default function DashboardScreen() {
 
       {/* Recent transactions */}
       <View className="px-6 pb-6">
-        <View className="flex-row justify-between items-center mb-4">
+        <View className="flex-row justify-between items-center mb-1">
           <Text className="text-textPrimary text-lg font-semibold">Recent Transactions</Text>
           {transactions.length > 0 && (
             <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
-              <Text className="text-primary text-sm font-medium">See All</Text>
+              <Text className="text-primary text-sm font-medium">See All →</Text>
             </TouchableOpacity>
           )}
         </View>

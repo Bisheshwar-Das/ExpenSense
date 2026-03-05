@@ -9,6 +9,7 @@ import { useGoals } from '../contexts/GoalContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { RootNavigationProp, TransactionDetailsRouteProp } from '../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppHeader from '@/components/AppHeader';
 
 const TYPE_CONFIG = {
   expense: { color: '#EF4444', bgClass: 'bg-expense', label: 'Expense', symbol: '−' },
@@ -82,45 +83,23 @@ export default function TransactionDetailsScreen() {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <View
-        style={{
-          backgroundColor: config.color,
-          paddingTop: insets.top + 8,
-          paddingBottom: 20,
-          paddingHorizontal: 24,
-        }}
-      >
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="chevron-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text className="text-white text-lg font-bold" style={{ letterSpacing: -0.3 }}>
-            Details
-          </Text>
-          {!isTransfer ? (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('EditTransaction', { transactionId: transaction.id })
-              }
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text className="text-white/90 text-base font-semibold">Edit</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ width: 40 }} />
-          )}
-        </View>
-      </View>
+      <AppHeader
+        title="Details"
+        onBack={() => navigation.goBack()}
+        onEdit={
+          !isTransfer
+            ? () => navigation.navigate('EditTransaction', { transactionId: transaction.id })
+            : undefined
+        }
+        hideMenu
+        backgroundColor={config.color}
+      />
 
       {/* Hero amount */}
       <View style={{ backgroundColor: config.color }}>
         <View className="items-center pb-9 pt-1">
           <Text className="text-white/70 text-sm mb-1">{config.label}</Text>
           <Text className="text-white font-extrabold" style={{ fontSize: 52, letterSpacing: -1 }}>
-            {config.symbol}
             {currency.symbol}
             {Math.abs(transaction.amount).toFixed(2)}
           </Text>

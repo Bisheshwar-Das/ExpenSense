@@ -1,5 +1,5 @@
 // components/TransferToPicker.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -40,6 +40,7 @@ export default function TransferToPicker({
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
   const selectedGoal = goals.find(g => g.id === selectedGoalId);
   const hasSelection = selectedWalletId !== '';
+  const pendingWalletId = useRef('');
 
   const isSavingsWallet = (walletId: string) => {
     const w = wallets.find(w => w.id === walletId);
@@ -51,14 +52,16 @@ export default function TransferToPicker({
       .filter(t => t.type === 'transfer' && t.toGoalId === goalId)
       .reduce((sum, t) => sum + t.amount, 0);
 
+  // FIX 1: savings wallets offer goal step, all others close immediately
   const handleSelectWallet = (walletId: string) => {
+    pendingWalletId.current = walletId;
     onSelectWallet(walletId);
     if (isSavingsWallet(walletId) && savingsGoals.length > 0) {
       setStep('goal');
     } else {
-      onSelectGoal('');
       setModalVisible(false);
       setStep('destination');
+      // Don't call onSelectGoal here at all
     }
   };
 
@@ -68,6 +71,7 @@ export default function TransferToPicker({
     setStep('destination');
   };
 
+  // FIX 2: skip = wallet already selected, just no goal — close and keep wallet
   const handleSkipGoal = () => {
     onSelectGoal('');
     setModalVisible(false);
@@ -94,7 +98,10 @@ export default function TransferToPicker({
   return (
     <View>
       <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
-        To <Text className="text-expense">*</Text>
+        To{' '}
+        <Text className="text-textSecondary font-normal normal-case" style={{ letterSpacing: 0 }}>
+          (optional)
+        </Text>
       </Text>
 
       <TouchableOpacity
@@ -144,7 +151,7 @@ export default function TransferToPicker({
               <View className="w-8 h-1 rounded-full bg-slate-300" />
             </View>
 
-            {/* Step 1: Destination */}
+            {/* Step 1: Destination — flat list, ALL wallet types */}
             {step === 'destination' && (
               <>
                 <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
@@ -168,7 +175,7 @@ export default function TransferToPicker({
                   contentContainerStyle={{
                     paddingHorizontal: 16,
                     paddingBottom: insets.bottom + 20,
-                    gap: 4,
+                    gap: 8,
                   }}
                 >
                   {availableWallets.length === 0 ? (
@@ -180,114 +187,52 @@ export default function TransferToPicker({
                       <Text className="text-slate-400 text-sm mt-1">Add another wallet first</Text>
                     </View>
                   ) : (
-                    <>
-                      {availableWallets.filter(w =>
-                        SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking')
-                      ).length > 0 && (
-                        <>
-                          <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider px-1 pb-1 pt-2">
-                            Savings Wallets
-                          </Text>
-                          {availableWallets
-                            .filter(w => SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking'))
-                            .map(wallet => {
-                              const isSelected = selectedWalletId === wallet.id;
-                              return (
-                                <TouchableOpacity
-                                  key={wallet.id}
-                                  onPress={() => handleSelectWallet(wallet.id)}
-                                  activeOpacity={0.65}
-                                  className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
-                                  style={{ paddingVertical: 11, gap: 14 }}
-                                >
-                                  <View
-                                    className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : ''}`}
-                                    style={{
-                                      backgroundColor: isSelected ? undefined : wallet.color + '20',
-                                    }}
-                                  >
-                                    <Text style={{ fontSize: 21 }}>{wallet.icon}</Text>
-                                  </View>
-                                  <View className="flex-1">
-                                    <Text
-                                      className={`text-base ${isSelected ? 'text-teal-700 font-semibold' : 'text-textPrimary'}`}
-                                    >
-                                      {wallet.name}
-                                    </Text>
-                                    <Text className="text-textSecondary text-xs capitalize mt-0.5">
-                                      {wallet.type ?? 'savings'} wallet
-                                      {savingsGoals.length > 0 && ' · tap to pick goal'}
-                                    </Text>
-                                  </View>
-                                  {isSelected ? (
-                                    <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
-                                      <Ionicons name="checkmark" size={13} color="#fff" />
-                                    </View>
-                                  ) : (
-                                    savingsGoals.length > 0 && (
-                                      <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
-                                    )
-                                  )}
-                                </TouchableOpacity>
-                              );
-                            })}
-                        </>
-                      )}
-
-                      {availableWallets.filter(
-                        w => !SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking')
-                      ).length > 0 && (
-                        <>
-                          <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider px-1 pb-1 pt-2">
-                            Other Wallets
-                          </Text>
-                          {availableWallets
-                            .filter(w => !SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking'))
-                            .map(wallet => {
-                              const isSelected = selectedWalletId === wallet.id;
-                              return (
-                                <TouchableOpacity
-                                  key={wallet.id}
-                                  onPress={() => handleSelectWallet(wallet.id)}
-                                  activeOpacity={0.65}
-                                  className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
-                                  style={{ paddingVertical: 11, gap: 14 }}
-                                >
-                                  <View
-                                    className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : ''}`}
-                                    style={{
-                                      backgroundColor: isSelected ? undefined : wallet.color + '20',
-                                    }}
-                                  >
-                                    <Text style={{ fontSize: 21 }}>{wallet.icon}</Text>
-                                  </View>
-                                  <View className="flex-1">
-                                    <Text
-                                      className={`text-base ${isSelected ? 'text-teal-700 font-semibold' : 'text-textPrimary'}`}
-                                    >
-                                      {wallet.name}
-                                    </Text>
-                                    <Text className="text-textSecondary text-xs capitalize mt-0.5">
-                                      {wallet.type ?? 'checking'} wallet
-                                    </Text>
-                                  </View>
-                                  {isSelected && (
-                                    <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
-                                      <Ionicons name="checkmark" size={13} color="#fff" />
-                                    </View>
-                                  )}
-                                </TouchableOpacity>
-                              );
-                            })}
-                        </>
-                      )}
-                    </>
+                    availableWallets.map(wallet => {
+                      const isSelected = selectedWalletId === wallet.id;
+                      const isSavings = isSavingsWallet(wallet.id);
+                      return (
+                        <TouchableOpacity
+                          key={wallet.id}
+                          onPress={() => handleSelectWallet(wallet.id)}
+                          activeOpacity={0.65}
+                          className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
+                          style={{ paddingVertical: 12, gap: 14 }}
+                        >
+                          <View
+                            className="w-10 h-10 rounded-xl items-center justify-center"
+                            style={{
+                              backgroundColor: isSelected ? '#99F6E4' : wallet.color + '20',
+                            }}
+                          >
+                            <Text style={{ fontSize: 21 }}>{wallet.icon}</Text>
+                          </View>
+                          <View className="flex-1">
+                            <Text
+                              className={`text-base ${isSelected ? 'text-teal-700 font-semibold' : 'text-textPrimary'}`}
+                            >
+                              {wallet.name}
+                            </Text>
+                            <Text className="text-textSecondary text-xs capitalize mt-0.5">
+                              {wallet.type ?? 'checking'} wallet
+                              {isSavings && savingsGoals.length > 0 && ' · can link to goal'}
+                            </Text>
+                          </View>
+                          {isSelected ? (
+                            <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
+                              <Ionicons name="checkmark" size={13} color="#fff" />
+                            </View>
+                          ) : isSavings && savingsGoals.length > 0 ? (
+                            <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
+                          ) : null}
+                        </TouchableOpacity>
+                      );
+                    })
                   )}
                 </ScrollView>
               </>
             )}
 
-            {/* Step 2: Goal */}
+            {/* Step 2: Goal — optional, always skippable */}
             {step === 'goal' && (
               <>
                 <View className="flex-row items-center justify-between px-6 pt-2 pb-2">
@@ -309,7 +254,7 @@ export default function TransferToPicker({
                     </Text>
                   </View>
                   <TouchableOpacity onPress={handleSkipGoal}>
-                    <Text className="text-textSecondary text-sm font-medium">Skip</Text>
+                    <Text className="text-primary text-sm font-semibold">Skip</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -319,10 +264,35 @@ export default function TransferToPicker({
                   contentContainerStyle={{
                     paddingHorizontal: 16,
                     paddingBottom: insets.bottom + 20,
-                    gap: 4,
+                    gap: 8,
                     paddingTop: 8,
                   }}
                 >
+                  {/* No specific goal — first option, most prominent */}
+                  <TouchableOpacity
+                    onPress={handleSkipGoal}
+                    activeOpacity={0.65}
+                    className={`flex-row items-center px-4 rounded-2xl ${hasSelection && !selectedGoalId ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
+                    style={{ paddingVertical: 12, gap: 14 }}
+                  >
+                    <View className="w-10 h-10 rounded-xl bg-slate-100 items-center justify-center">
+                      <Text style={{ fontSize: 21 }}>💰</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-textPrimary text-base font-medium">
+                        No specific goal
+                      </Text>
+                      <Text className="text-textSecondary text-xs mt-0.5">
+                        Just saving generally
+                      </Text>
+                    </View>
+                    {hasSelection && !selectedGoalId && (
+                      <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
+                        <Ionicons name="checkmark" size={13} color="#fff" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
                   {savingsGoals.map(goal => {
                     const saved = getGoalProgress(goal.id);
                     const remaining = goal.targetAmount - saved;
@@ -335,11 +305,11 @@ export default function TransferToPicker({
                         onPress={() => handleSelectGoal(goal.id)}
                         activeOpacity={0.65}
                         className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
-                        style={{ paddingVertical: 11, gap: 14 }}
+                        style={{ paddingVertical: 12, gap: 14 }}
                       >
                         <View
-                          className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : ''}`}
-                          style={{ backgroundColor: isSelected ? undefined : goal.color + '20' }}
+                          className="w-10 h-10 rounded-xl items-center justify-center"
+                          style={{ backgroundColor: isSelected ? '#99F6E4' : goal.color + '20' }}
                         >
                           <Text style={{ fontSize: 21 }}>{goal.icon}</Text>
                         </View>
@@ -371,23 +341,6 @@ export default function TransferToPicker({
                       </TouchableOpacity>
                     );
                   })}
-
-                  <TouchableOpacity
-                    onPress={handleSkipGoal}
-                    activeOpacity={0.65}
-                    className={`flex-row items-center px-4 rounded-2xl ${hasSelection && !selectedGoalId ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
-                    style={{ paddingVertical: 11, gap: 14 }}
-                  >
-                    <View className="w-10 h-10 rounded-xl bg-slate-100 items-center justify-center">
-                      <Text style={{ fontSize: 21 }}>💰</Text>
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-textPrimary text-base">No specific goal</Text>
-                      <Text className="text-textSecondary text-xs mt-0.5">
-                        Just saving generally
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
                 </ScrollView>
               </>
             )}

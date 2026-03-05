@@ -4,9 +4,10 @@ import { NavigationProp, RouteProp } from '@react-navigation/native';
 // Define all the routes and their params
 export type RootStackParamList = {
   MainTabs: undefined;
-  Transactions: undefined;
+  Transactions: { walletFilter?: string } | undefined;
   TransactionDetails: { transactionId: string };
   EditTransaction: { transactionId: string };
+  WalletDetail: { walletId: string };
   Settings: undefined;
 };
 
