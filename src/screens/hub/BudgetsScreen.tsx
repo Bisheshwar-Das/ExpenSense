@@ -1,101 +1,81 @@
-// screens/BudgetsScreen.tsx
+// src/screens/hub/BudgetsScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useGoals } from '../../contexts/GoalContext';
-import { useTransactions } from '../../contexts/TransactionContext';
-import { useSettings } from '../../contexts/SettingsContext';
-import { Goal } from '../../types';
-import GoalModal from '../../components/GoalModal';
 import { useNavigation } from '@react-navigation/native';
-import AppHeader from '@/components/AppHeader';
 import { Ionicons } from '@expo/vector-icons';
+import { useBudgets } from '../../contexts/BudgetContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useCategories } from '../../contexts/CategoryContext';
+import { Goal } from '../../types';
+import BudgetModal from '../../components/BudgetModal';
+import AppHeader from '../../components/AppHeader';
 
 type BudgetSort = 'overspend' | 'amount' | 'name';
 
 export default function BudgetsScreen() {
   const navigation = useNavigation<any>();
-  const { goals, deleteGoal } = useGoals();
-  const { transactions } = useTransactions();
+  const { budgets, deleteBudget, getBudgetProgress } = useBudgets();
   const { currency } = useSettings();
+  const { getCategoryById } = useCategories();
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [editingBudget, setEditingBudget] = useState<Goal | null>(null);
   const [sortBy, setSortBy] = useState<BudgetSort>('overspend');
   const [sortAsc, setSortAsc] = useState(false);
 
-  const budgetGoals = goals.filter(g => g.type === 'budget');
-
-  const getBudgetSpending = (category: string, period?: string) => {
-    const now = new Date();
-    let startDate: Date;
-    if (period === 'weekly') {
-      startDate = new Date(now);
-      startDate.setDate(now.getDate() - now.getDay());
-      startDate.setHours(0, 0, 0, 0);
-    } else if (period === 'yearly') {
-      startDate = new Date(now.getFullYear(), 0, 1);
-    } else {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-    return transactions
-      .filter(t => t.type === 'expense' && t.category === category && new Date(t.date) >= startDate)
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-  };
-
-  const handleAddGoal = () => {
-    setEditingGoal(null);
+  const handleAdd = () => {
+    setEditingBudget(null);
     setModalVisible(true);
   };
-  const handleEditGoal = (goal: Goal) => {
-    setEditingGoal(goal);
+  const handleEdit = (b: Goal) => {
+    setEditingBudget(b);
     setModalVisible(true);
   };
-  const handleDeleteGoal = (goal: Goal) => {
-    Alert.alert('Delete Budget', `Delete "${goal.name}"?`, [
+  const handleDelete = (b: Goal) => {
+    Alert.alert('Delete Budget', `Delete "${b.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteGoal(goal.id) },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteBudget(b.id) },
     ]);
   };
 
-  // Summary figures
-  const totalBudget = budgetGoals.reduce((sum, g) => sum + g.targetAmount, 0);
-  const totalSpent = budgetGoals.reduce(
-    (sum, g) => sum + getBudgetSpending(g.category || '', g.period),
-    0
-  );
-  const overBudgetCount = budgetGoals.filter(
-    g => getBudgetSpending(g.category || '', g.period) > g.targetAmount
-  ).length;
+  // Summary
+  const totalBudget = budgets.reduce((sum, b) => sum + b.targetAmount, 0);
+  const totalSpent = budgets.reduce((sum, b) => sum + getBudgetProgress(b.id).spent, 0);
+  const overCount = budgets.filter(b => getBudgetProgress(b.id).spent > b.targetAmount).length;
 
-  const sortedGoals = [...budgetGoals].sort((a, b) => {
-    const aSpent = getBudgetSpending(a.category || '', a.period);
-    const bSpent = getBudgetSpending(b.category || '', b.period);
+  const sorted = [...budgets].sort((a, b) => {
+    const aP = getBudgetProgress(a.id);
+    const bP = getBudgetProgress(b.id);
     let result = 0;
-    if (sortBy === 'overspend') result = bSpent / b.targetAmount - aSpent / a.targetAmount;
+    if (sortBy === 'overspend') result = bP.spent / b.targetAmount - aP.spent / a.targetAmount;
     else if (sortBy === 'amount') result = a.targetAmount - b.targetAmount;
-    else if (sortBy === 'name') result = (a.category || '').localeCompare(b.category || '');
+    else if (sortBy === 'name') result = a.name.localeCompare(b.name);
     return sortAsc ? -result : result;
   });
 
   return (
     <>
-      <ScrollView className="flex-1 bg-background">
+      <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
         <AppHeader
           title="Budgets"
-          subtitle={`${budgetGoals.length} ${budgetGoals.length === 1 ? 'budget' : 'budgets'}`}
+          subtitle={`${budgets.length} ${budgets.length === 1 ? 'budget' : 'budgets'}`}
           onBack={() => navigation.goBack()}
-          onEdit={handleAddGoal}
+          onEdit={handleAdd}
           editLabel="+ Add"
           hideMenu
           backgroundColor="#8B5CF6"
         />
 
-        <View className="px-4 pb-8">
+        <View style={{ paddingHorizontal: 16, paddingBottom: 32 }}>
           {/* Summary card */}
-          {budgetGoals.length > 0 && (
+          {budgets.length > 0 && (
             <View
-              className="bg-card rounded-2xl mt-4 mb-4 overflow-hidden"
               style={{
+                backgroundColor: '#FFF',
+                borderRadius: 16,
+                marginTop: 16,
+                marginBottom: 16,
+                overflow: 'hidden',
                 shadowColor: '#8B5CF6',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.12,
@@ -103,185 +83,287 @@ export default function BudgetsScreen() {
                 elevation: 3,
               }}
             >
-              <View className="px-4 pt-4 pb-3">
-                <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-3">
+              <View style={{ padding: 16 }}>
+                <Text
+                  style={{
+                    color: '#64748B',
+                    fontSize: 11,
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.8,
+                    marginBottom: 12,
+                  }}
+                >
                   This Period
                 </Text>
-                <View className="flex-row justify-between mb-3">
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginBottom: 12,
+                  }}
+                >
                   <View>
-                    <Text className="text-textSecondary text-xs mb-0.5">Total Budget</Text>
-                    <Text className="text-textPrimary font-bold text-base">
+                    <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>Budget</Text>
+                    <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 16 }}>
                       {currency.symbol}
                       {totalBudget.toFixed(0)}
                     </Text>
                   </View>
-                  <View className="items-center">
-                    <Text className="text-textSecondary text-xs mb-0.5">Spent</Text>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>Spent</Text>
                     <Text
-                      className={`font-bold text-base ${totalSpent > totalBudget ? 'text-expense' : 'text-textPrimary'}`}
+                      style={{
+                        color: totalSpent > totalBudget ? '#EF4444' : '#0F172A',
+                        fontWeight: '700',
+                        fontSize: 16,
+                      }}
                     >
                       {currency.symbol}
                       {totalSpent.toFixed(0)}
                     </Text>
                   </View>
-                  <View className="items-end">
-                    <Text className="text-textSecondary text-xs mb-0.5">Remaining</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>
+                      Remaining
+                    </Text>
                     <Text
-                      className={`font-bold text-base ${totalBudget - totalSpent < 0 ? 'text-expense' : 'text-income'}`}
+                      style={{
+                        color: totalBudget - totalSpent < 0 ? '#EF4444' : '#22C55E',
+                        fontWeight: '700',
+                        fontSize: 16,
+                      }}
                     >
                       {currency.symbol}
                       {Math.abs(totalBudget - totalSpent).toFixed(0)}
                     </Text>
                   </View>
                 </View>
-                <View className="h-2 bg-border rounded-full overflow-hidden">
+                <View
+                  style={{
+                    height: 8,
+                    backgroundColor: '#E2E8F0',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                  }}
+                >
                   <View
-                    className="h-full rounded-full"
                     style={{
+                      height: '100%',
+                      borderRadius: 4,
                       width: `${Math.min((totalSpent / Math.max(totalBudget, 1)) * 100, 100)}%`,
                       backgroundColor: totalSpent > totalBudget ? '#EF4444' : '#8B5CF6',
                     }}
                   />
                 </View>
               </View>
-              {overBudgetCount > 0 && (
-                <View className="border-t border-border px-4 py-2.5 flex-row items-center gap-2">
+              {overCount > 0 && (
+                <View
+                  style={{
+                    borderTopWidth: 1,
+                    borderTopColor: '#E2E8F0',
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
                   <Ionicons name="warning-outline" size={14} color="#EF4444" />
-                  <Text className="text-expense text-xs font-semibold">
-                    {overBudgetCount} {overBudgetCount === 1 ? 'budget' : 'budgets'} over limit
+                  <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '600' }}>
+                    {overCount} {overCount === 1 ? 'budget' : 'budgets'} over limit
                   </Text>
                 </View>
               )}
             </View>
           )}
 
-          {/* Sort controls */}
-          {budgetGoals.length > 0 && (
-            <View className="flex-row items-center gap-2 mb-3">
-              <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider flex-1">
+          {/* Sort bar */}
+          {budgets.length > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Text
+                style={{
+                  color: '#94A3B8',
+                  fontSize: 11,
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                  flex: 1,
+                }}
+              >
                 Budgets
               </Text>
-              {(
-                [
-                  { key: 'overspend', label: 'Overspend' },
-                  { key: 'amount', label: 'Amount' },
-                  { key: 'name', label: 'Name' },
-                ] as { key: BudgetSort; label: string }[]
-              ).map(opt => (
+              {(['overspend', 'amount', 'name'] as BudgetSort[]).map(opt => (
                 <TouchableOpacity
-                  key={opt.key}
-                  onPress={() => setSortBy(opt.key)}
-                  className={`px-2.5 py-1 rounded-full ${sortBy === opt.key ? 'bg-violet-500' : 'bg-border'}`}
+                  key={opt}
+                  onPress={() => setSortBy(opt)}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 20,
+                    backgroundColor: sortBy === opt ? '#8B5CF6' : '#E2E8F0',
+                  }}
                 >
                   <Text
-                    className={`text-xs font-medium ${sortBy === opt.key ? 'text-white' : 'text-textSecondary'}`}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '600',
+                      color: sortBy === opt ? '#FFF' : '#64748B',
+                      textTransform: 'capitalize',
+                    }}
                   >
-                    {opt.label}
+                    {opt}
                   </Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
                 onPress={() => setSortAsc(v => !v)}
-                className="w-7 h-7 rounded-full bg-border items-center justify-center"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: '#E2E8F0',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <Ionicons name={sortAsc ? 'arrow-up' : 'arrow-down'} size={13} color="#64748B" />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Budget list */}
-          {budgetGoals.length === 0 ? (
+          {/* Empty state */}
+          {budgets.length === 0 ? (
             <View
-              className="bg-card rounded-2xl p-8 items-center mt-4"
               style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 1,
+                backgroundColor: '#FFF',
+                borderRadius: 16,
+                padding: 32,
+                alignItems: 'center',
+                marginTop: 16,
               }}
             >
               <Text style={{ fontSize: 36, marginBottom: 12 }}>📊</Text>
-              <Text className="text-textPrimary font-semibold text-base mb-1">No budgets set</Text>
-              <Text className="text-textSecondary text-sm text-center mb-4">
+              <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 16, marginBottom: 4 }}>
+                No budgets set
+              </Text>
+              <Text
+                style={{ color: '#64748B', fontSize: 14, textAlign: 'center', marginBottom: 16 }}
+              >
                 Control your spending by category
               </Text>
               <TouchableOpacity
-                onPress={handleAddGoal}
-                className="rounded-2xl px-6 py-3"
-                style={{ backgroundColor: '#8B5CF6' }}
+                onPress={handleAdd}
+                style={{
+                  backgroundColor: '#8B5CF6',
+                  borderRadius: 12,
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                }}
               >
-                <Text className="text-white font-semibold">Create First Budget</Text>
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>Create First Budget</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            sortedGoals.map(goal => {
-              const spent = getBudgetSpending(goal.category || '', goal.period);
-              const remaining = goal.targetAmount - spent;
-              const progress = (spent / goal.targetAmount) * 100;
-              const isOverBudget = spent > goal.targetAmount;
+            sorted.map(budget => {
+              const { spent, percentage } = getBudgetProgress(budget.id);
+              const remaining = budget.targetAmount - spent;
+              const isOver = spent > budget.targetAmount;
+              const cat = budget.categoryId ? getCategoryById(budget.categoryId) : null;
 
               return (
                 <TouchableOpacity
-                  key={goal.id}
-                  onPress={() => handleEditGoal(goal)}
-                  onLongPress={() => handleDeleteGoal(goal)}
-                  className="bg-card rounded-2xl mb-3 overflow-hidden"
+                  key={budget.id}
+                  onPress={() => handleEdit(budget)}
+                  onLongPress={() => handleDelete(budget)}
                   style={{
-                    shadowColor: goal.color,
+                    backgroundColor: '#FFF',
+                    borderRadius: 16,
+                    marginBottom: 12,
+                    overflow: 'hidden',
+                    shadowColor: budget.color,
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.12,
                     shadowRadius: 8,
                     elevation: 2,
                   }}
                 >
-                  <View className="p-4">
-                    <View className="flex-row items-center justify-between mb-3">
-                      <View className="flex-row items-center flex-1">
-                        <View
-                          className="w-11 h-11 rounded-xl items-center justify-center mr-3"
-                          style={{ backgroundColor: goal.color + '20' }}
-                        >
-                          <Text style={{ fontSize: 22 }}>{goal.icon}</Text>
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-textPrimary font-semibold text-base">
-                            {goal.category}
-                          </Text>
-                          <Text className="text-textSecondary text-xs capitalize">
-                            {goal.period} budget
-                          </Text>
-                        </View>
+                  <View style={{ padding: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                          backgroundColor: budget.color + '20',
+                        }}
+                      >
+                        <Text style={{ fontSize: 22 }}>{budget.icon}</Text>
                       </View>
-                      {isOverBudget && (
-                        <View className="bg-expense/10 px-2.5 py-1 rounded-full">
-                          <Text className="text-expense text-xs font-semibold">Over!</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 16 }}>
+                          {cat ? cat.name : budget.name}
+                        </Text>
+                        <Text
+                          style={{ color: '#94A3B8', fontSize: 12, textTransform: 'capitalize' }}
+                        >
+                          {budget.period} budget
+                        </Text>
+                      </View>
+                      {isOver && (
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(239,68,68,0.1)',
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 20,
+                          }}
+                        >
+                          <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '600' }}>
+                            Over!
+                          </Text>
                         </View>
                       )}
                     </View>
 
-                    <View className="h-2 bg-border rounded-full overflow-hidden mb-3">
+                    <View
+                      style={{
+                        height: 8,
+                        backgroundColor: '#E2E8F0',
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                        marginBottom: 12,
+                      }}
+                    >
                       <View
-                        className="h-full rounded-full"
                         style={{
-                          width: `${Math.min(progress, 100)}%`,
-                          backgroundColor: isOverBudget ? '#EF4444' : goal.color,
+                          height: '100%',
+                          borderRadius: 4,
+                          width: `${Math.min(percentage, 100)}%`,
+                          backgroundColor: isOver ? '#EF4444' : budget.color,
                         }}
                       />
                     </View>
 
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-textSecondary text-sm">
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: '#64748B', fontSize: 13 }}>
                         {currency.symbol}
                         {spent.toFixed(0)} of {currency.symbol}
-                        {goal.targetAmount.toFixed(0)}
+                        {budget.targetAmount.toFixed(0)}
                       </Text>
                       <Text
-                        className={`text-sm font-semibold ${isOverBudget ? 'text-expense' : 'text-income'}`}
+                        style={{
+                          color: isOver ? '#EF4444' : '#22C55E',
+                          fontSize: 13,
+                          fontWeight: '600',
+                        }}
                       >
-                        {isOverBudget ? '−' : ''}
+                        {isOver ? '−' : ''}
                         {currency.symbol}
-                        {Math.abs(remaining).toFixed(0)} {isOverBudget ? 'over' : 'left'}
+                        {Math.abs(remaining).toFixed(0)} {isOver ? 'over' : 'left'}
                       </Text>
                     </View>
                   </View>
@@ -292,11 +374,10 @@ export default function BudgetsScreen() {
         </View>
       </ScrollView>
 
-      <GoalModal
+      <BudgetModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        editGoal={editingGoal}
-        defaultType="budget"
+        editBudget={editingBudget}
       />
     </>
   );

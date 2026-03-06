@@ -1,4 +1,4 @@
-// screens/SettingsScreen.tsx
+// src/screens/settings/SettingsScreen.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -12,33 +12,31 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSettings, CURRENCIES, Currency } from '../../contexts/SettingsContext';
+import { useSettings, CURRENCIES } from '../../contexts/SettingsContext';
 import { useTransactions } from '../../contexts/TransactionContext';
 import { useWallets } from '../../contexts/WalletContext';
-import { useGoals } from '../../contexts/GoalContext';
+import { useBudgets } from '../../contexts/BudgetContext';
+import { useSavings } from '../../contexts/SavingsContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { currency, theme, setCurrency, setTheme } = useSettings();
   const { transactions, clearAllTransactions } = useTransactions();
   const { wallets, clearAllWallets } = useWallets();
-  const { goals, clearAllGoals } = useGoals();
+  const { budgets } = useBudgets();
+  const { savingsGoals } = useSavings();
   const insets = useSafeAreaInsets();
 
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
-  // App version - update this when you release
   const APP_VERSION = '1.0.0';
 
-  // Handle theme toggle
   const handleThemeToggle = (value: boolean) => {
     setTheme(value ? 'dark' : 'light');
     Alert.alert('Theme', `${value ? 'Dark' : 'Light'} mode will be available in the next update!`);
   };
 
-  // Export data as JSON
   const handleExportData = async () => {
     try {
       if (transactions.length === 0) {
@@ -51,13 +49,13 @@ export default function SettingsScreen() {
         version: APP_VERSION,
         transactions,
         wallets,
-        goals,
+        budgets,
+        savingsGoals,
         settings: { currency: currency.code, theme },
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
 
-      // Use native Share API
       await Share.share({
         message: jsonString,
         title: 'Expen$ense Backup',
@@ -70,11 +68,10 @@ export default function SettingsScreen() {
     }
   };
 
-  // Clear all data
   const handleClearAllData = () => {
     Alert.alert(
       'Clear All Data',
-      'This will permanently delete ALL transactions, wallets, and goals. This action cannot be undone.',
+      'This will permanently delete ALL transactions, wallets, budgets and savings goals. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -84,7 +81,6 @@ export default function SettingsScreen() {
             try {
               await clearAllTransactions();
               await clearAllWallets();
-              await clearAllGoals();
               Alert.alert('Success', 'All data has been cleared.');
             } catch (error) {
               Alert.alert('Error', 'Failed to clear data. Please try again.');
@@ -95,7 +91,6 @@ export default function SettingsScreen() {
     );
   };
 
-  // About / App Info
   const handleAbout = () => {
     Alert.alert(
       'About Expen$ense',
@@ -104,21 +99,23 @@ export default function SettingsScreen() {
     );
   };
 
+  const totalGoals = budgets.length + savingsGoals.length;
+
   return (
     <>
       <ScrollView className="flex-1 bg-background">
         {/* Header */}
         <View
-          className="bg-primary pt-16 pb-6 px-6 rounded-b-[30px]"
+          className="bg-primary pt-8 pb-6 px-6 rounded-b-[30px]"
           style={{ paddingTop: insets.top + 8 }}
         >
           <View className="flex-row items-center mb-2">
             <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3">
-              <Text className="text-white text-2xl">←</Text>
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
             </TouchableOpacity>
             <Text className="text-white text-3xl font-bold">⚙️ Settings</Text>
           </View>
-          <Text className="text-white/80 text-sm ml-9">Customize your experience</Text>
+          <Text className="text-white/80 text-sm ml-12">Customize your experience</Text>
         </View>
 
         <View className="p-6">
@@ -280,7 +277,7 @@ export default function SettingsScreen() {
             </View>
             <View className="flex-row justify-between">
               <Text className="text-textSecondary text-sm">Goals</Text>
-              <Text className="text-textPrimary font-semibold">{goals.length}</Text>
+              <Text className="text-textPrimary font-semibold">{totalGoals}</Text>
             </View>
           </View>
         </View>
@@ -294,7 +291,7 @@ export default function SettingsScreen() {
         onRequestClose={() => setCurrencyModalVisible(false)}
       >
         <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-[30px] pt-6 pb-8 px-6 max-h-[80%]">
+          <View className="bg-card rounded-t-3xl pt-6 pb-8 px-6 max-h-[80%]">
             {/* Modal Header */}
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-textPrimary text-xl font-bold">Select Currency</Text>

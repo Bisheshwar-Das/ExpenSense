@@ -1,18 +1,18 @@
-// components/TransferToPicker.tsx
+// src/components/TransferToPicker.tsx
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWallets } from '../../contexts/WalletContext';
-import { useGoals } from '../../contexts/GoalContext';
+import { useBudgets } from '../../contexts/BudgetContext';
+import { useSavings } from '../../contexts/SavingsContext';
 import { useTransactions } from '../../contexts/TransactionContext';
 import { useSettings } from '../../contexts/SettingsContext';
-import { SAVINGS_WALLET_TYPES } from '../../types';
-
+import { SAVINGS_WALLET_TYPES } from '@/types';
 interface TransferToPickerProps {
   selectedWalletId: string;
   selectedGoalId: string;
-  excludeWalletName: string;
+  excludeWalletId: string;
   onSelectWallet: (walletId: string) => void;
   onSelectGoal: (goalId: string) => void;
 }
@@ -22,7 +22,7 @@ type Step = 'destination' | 'goal';
 export default function TransferToPicker({
   selectedWalletId,
   selectedGoalId,
-  excludeWalletName,
+  excludeWalletId,
   onSelectWallet,
   onSelectGoal,
 }: TransferToPickerProps) {
@@ -30,15 +30,14 @@ export default function TransferToPicker({
   const [step, setStep] = useState<Step>('destination');
 
   const { wallets } = useWallets();
-  const { goals } = useGoals();
+  const { savingsGoals, getSavingsProgress } = useSavings();
   const { transactions } = useTransactions();
   const { currency } = useSettings();
   const insets = useSafeAreaInsets();
 
-  const savingsGoals = goals.filter(g => g.type === 'savings');
-  const availableWallets = wallets.filter(w => w.name !== excludeWalletName);
+  const availableWallets = wallets.filter(w => w.id !== excludeWalletId);
   const selectedWallet = wallets.find(w => w.id === selectedWalletId);
-  const selectedGoal = goals.find(g => g.id === selectedGoalId);
+  const selectedGoal = savingsGoals.find(g => g.id === selectedGoalId);
   const hasSelection = selectedWalletId !== '';
   const pendingWalletId = useRef('');
 
@@ -47,12 +46,6 @@ export default function TransferToPicker({
     return w ? SAVINGS_WALLET_TYPES.includes(w.type ?? 'checking') : false;
   };
 
-  const getGoalProgress = (goalId: string) =>
-    transactions
-      .filter(t => t.type === 'transfer' && t.toGoalId === goalId)
-      .reduce((sum, t) => sum + t.amount, 0);
-
-  // FIX 1: savings wallets offer goal step, all others close immediately
   const handleSelectWallet = (walletId: string) => {
     pendingWalletId.current = walletId;
     onSelectWallet(walletId);
@@ -61,7 +54,6 @@ export default function TransferToPicker({
     } else {
       setModalVisible(false);
       setStep('destination');
-      // Don't call onSelectGoal here at all
     }
   };
 
@@ -71,7 +63,6 @@ export default function TransferToPicker({
     setStep('destination');
   };
 
-  // FIX 2: skip = wallet already selected, just no goal — close and keep wallet
   const handleSkipGoal = () => {
     onSelectGoal('');
     setModalVisible(false);
@@ -294,7 +285,7 @@ export default function TransferToPicker({
                   </TouchableOpacity>
 
                   {savingsGoals.map(goal => {
-                    const saved = getGoalProgress(goal.id);
+                    const saved = getSavingsProgress(goal.id).saved;
                     const remaining = goal.targetAmount - saved;
                     const progress = Math.min((saved / goal.targetAmount) * 100, 100);
                     const isComplete = saved >= goal.targetAmount;

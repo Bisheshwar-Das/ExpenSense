@@ -1,9 +1,10 @@
-// components/TransactionRow.tsx
+// src/components/TransactionRow.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Transaction } from '../types';
 import { useWallets } from '../contexts/WalletContext';
-import { useGoals } from '../contexts/GoalContext';
+import { useBudgets } from '../contexts/BudgetContext';
+import { useSavings } from '../contexts/SavingsContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useCategories } from '../contexts/CategoryContext';
 
@@ -14,9 +15,10 @@ interface TransactionRowProps {
 
 export default function TransactionRow({ transaction, onPress }: TransactionRowProps) {
   const { wallets } = useWallets();
-  const { goals } = useGoals();
+  const { budgets } = useBudgets();
+  const { savingsGoals } = useSavings();
   const { currency } = useSettings();
-  const { getCategoryById, expenseCategories, incomeCategories } = useCategories();
+  const { getCategoryById } = useCategories();
 
   const now = new Date();
   const yesterday = new Date(now);
@@ -38,28 +40,38 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
     });
   };
 
-  // Resolve category — prefer id lookup, fall back to name match, then raw string
+  // Resolve category — prefer id lookup
   const resolveCategory = () => {
     if (transaction.categoryId) return getCategoryById(transaction.categoryId);
-    const cats = transaction.type === 'expense' ? expenseCategories : incomeCategories;
-    return cats.find(c => c.name === transaction.category);
+    return null;
   };
 
   const getSubtitle = () => {
     if (transaction.type === 'transfer') {
+      const fromWallet = transaction.walletId
+        ? wallets.find(w => w.id === transaction.walletId)
+        : null;
       const toWallet = transaction.toWalletId
         ? wallets.find(w => w.id === transaction.toWalletId)
         : null;
-      const toGoal = transaction.toGoalId ? goals.find(g => g.id === transaction.toGoalId) : null;
+      const toGoal = transaction.toGoalId
+        ? budgets.find(g => g.id === transaction.toGoalId) ||
+          savingsGoals.find(g => g.id === transaction.toGoalId)
+        : null;
       const toLabel = toWallet ? toWallet.name : toGoal ? toGoal.name : 'Unknown';
-      return `${transaction.wallet} → ${toLabel}`;
+      const fromLabel = fromWallet ? fromWallet.name : 'Unknown';
+      return `${fromLabel} → ${toLabel}`;
     }
-    return transaction.wallet;
+    const wallet = transaction.walletId ? wallets.find(w => w.id === transaction.walletId) : null;
+    return wallet ? wallet.name : 'Unknown';
   };
 
   const getRightLabel = () => {
     if (transaction.type === 'transfer') {
-      const toGoal = transaction.toGoalId ? goals.find(g => g.id === transaction.toGoalId) : null;
+      const toGoal = transaction.toGoalId
+        ? budgets.find(g => g.id === transaction.toGoalId) ||
+          savingsGoals.find(g => g.id === transaction.toGoalId)
+        : null;
       const toWallet = transaction.toWalletId
         ? wallets.find(w => w.id === transaction.toWalletId)
         : null;
@@ -68,15 +80,15 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
       return null;
     }
     const cat = resolveCategory();
-    return cat ? `${cat.icon} ${cat.name}` : transaction.category || null;
+    return cat ? `${cat.icon} ${cat.name}` : null;
   };
 
   const amountColor =
     transaction.type === 'income'
-      ? 'text-income'
+      ? '#22C55E'
       : transaction.type === 'transfer'
-        ? 'text-primary'
-        : 'text-expense';
+        ? '#14B8A6'
+        : '#EF4444';
   const amountPrefix =
     transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '⇄ ' : '-';
   const rightLabel = getRightLabel();
@@ -103,7 +115,7 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
         </Text>
       </View>
       <View className="items-end">
-        <Text className={`text-base font-bold ${amountColor}`}>
+        <Text className="text-base font-bold" style={{ color: amountColor }}>
           {amountPrefix}
           {currency.symbol}
           {Math.abs(transaction.amount).toFixed(2)}

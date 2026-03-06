@@ -1,12 +1,13 @@
-// screens/hub/CategoriesScreen.tsx
+// src/screens/hub/CategoriesScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCategories } from '../../contexts/CategoryContext';
+import { useTransactions } from '../../contexts/TransactionContext';
 import { Category, CategoryType } from '../../types';
 import { RootNavigationProp } from '../../navigation/types';
+import AppHeader from '../../components/AppHeader';
 
 const TAB_TYPES: { label: string; value: CategoryType }[] = [
   { label: 'Expense', value: 'expense' },
@@ -15,8 +16,8 @@ const TAB_TYPES: { label: string; value: CategoryType }[] = [
 
 export default function CategoriesScreen() {
   const navigation = useNavigation<RootNavigationProp>();
-  const insets = useSafeAreaInsets();
   const { expenseCategories, incomeCategories, deleteCategory, isDefault } = useCategories();
+  const { getTransactionsByCategory } = useTransactions();
   const [activeTab, setActiveTab] = useState<CategoryType>('expense');
 
   const categories = activeTab === 'expense' ? expenseCategories : incomeCategories;
@@ -24,73 +25,37 @@ export default function CategoriesScreen() {
   const customs = categories.filter(c => !isDefault(c.id));
 
   const handleDelete = (cat: Category) => {
-    Alert.alert(
-      'Delete Category',
-      `Remove "${cat.name}"? Existing transactions won't be affected.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(cat.id) },
-      ]
-    );
+    const count = getTransactionsByCategory(cat.id).length;
+    const message =
+      count > 0
+        ? `"${cat.name}" is used by ${count} transaction${count === 1 ? '' : 's'}. Those transactions will show "Unknown Category" after deletion.`
+        : `Remove "${cat.name}"?`;
+
+    Alert.alert('Delete Category', message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCategory(cat.id);
+          } catch (e: any) {
+            Alert.alert('Error', e.message);
+          }
+        },
+      },
+    ]);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-      {/* Compact custom header with tabs built in */}
-      <View
-        style={{
-          backgroundColor: '#14B8A6',
-          paddingTop: insets.top + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 16,
-          borderBottomLeftRadius: 24,
-          borderBottomRightRadius: 24,
-        }}
+      <AppHeader
+        title="Categories"
+        onBack={() => navigation.goBack()}
+        onEdit={() => navigation.navigate('AddEditCategory', { defaultType: activeTab })}
+        editLabel="+ Add"
+        hideMenu
       >
-        {/* Top row — all items same height via alignItems center */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 12,
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
-          </TouchableOpacity>
-
-          <Text
-            style={{
-              flex: 1,
-              color: '#fff',
-              fontSize: 18,
-              fontWeight: '700',
-              textAlign: 'center',
-              letterSpacing: -0.3,
-            }}
-          >
-            Categories
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('AddEditCategory', { defaultType: activeTab })}
-            style={{
-              height: 36,
-              paddingHorizontal: 14,
-              borderRadius: 12,
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>+ Add</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Tab switcher inside header */}
         <View
           style={{
@@ -129,15 +94,11 @@ export default function CategoriesScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
+      </AppHeader>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingBottom: insets.bottom + 32,
-          paddingTop: 16,
-        }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
       >
         {/* Custom categories */}
         {customs.length > 0 && (
@@ -152,7 +113,7 @@ export default function CategoriesScreen() {
                   onEdit={() =>
                     navigation.navigate('AddEditCategory', {
                       categoryId: cat.id,
-                      defaultType: cat.type as CategoryType,
+                      defaultType: cat.type,
                     })
                   }
                   onDelete={() => handleDelete(cat)}
@@ -163,7 +124,7 @@ export default function CategoriesScreen() {
         )}
 
         {/* Default categories */}
-        <View>
+        <View style={{ marginBottom: 12 }}>
           <Text style={sectionLabel}>Default</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {defaults.map(cat => (
@@ -183,14 +144,14 @@ export default function CategoriesScreen() {
           <TouchableOpacity
             onPress={() => navigation.navigate('AddEditCategory', { defaultType: activeTab })}
             style={{
-              marginTop: 12,
+              marginTop: 4,
               backgroundColor: '#fff',
               borderRadius: 16,
               borderWidth: 1.5,
               borderColor: '#E2E8F0',
               borderStyle: 'dashed',
               alignItems: 'center',
-              paddingVertical: 18,
+              paddingVertical: 20,
               gap: 6,
             }}
           >
@@ -219,8 +180,6 @@ export default function CategoriesScreen() {
   );
 }
 
-// ─── Category Tile — 4 columns, compact ───────────────────────────────────────
-
 function CategoryTile({
   category,
   isDefault,
@@ -232,7 +191,6 @@ function CategoryTile({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const color = (category as any).color ?? '#14B8A6';
   return (
     <View
       style={{
@@ -243,11 +201,11 @@ function CategoryTile({
         paddingBottom: isDefault ? 12 : 8,
         paddingHorizontal: 6,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 1,
+        shadowColor: category.color,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 6,
+        elevation: 2,
       }}
     >
       <View
@@ -255,7 +213,7 @@ function CategoryTile({
           width: 40,
           height: 40,
           borderRadius: 12,
-          backgroundColor: color + '20',
+          backgroundColor: category.color + '20',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: 5,

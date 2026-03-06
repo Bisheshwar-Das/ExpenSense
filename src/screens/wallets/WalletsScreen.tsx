@@ -44,11 +44,11 @@ export default function WalletsScreen() {
     if (!wallet) return 0;
     return transactions.reduce((sum, t) => {
       if (t.type === 'transfer') {
-        if (t.wallet === wallet.name) return sum - t.amount;
+        if (t.walletId === wallet.name) return sum - t.amount;
         if (t.toWalletId === walletId) return sum + t.amount;
         return sum;
       }
-      if (t.wallet === wallet.name) return sum + t.amount;
+      if (t.walletId === wallet.name) return sum + t.amount;
       return sum;
     }, 0);
   };
@@ -75,7 +75,7 @@ export default function WalletsScreen() {
 
   const handleDeleteWallet = (wallet: Wallet) => {
     const count = transactions.filter(
-      t => t.wallet === wallet.name || t.toWalletId === wallet.id
+      t => t.walletId === wallet.name || t.toWalletId === wallet.id
     ).length;
     if (count > 0) {
       Alert.alert(
@@ -126,7 +126,7 @@ export default function WalletsScreen() {
   const renderWalletCard = (wallet: Wallet) => {
     const balance = getWalletBalance(wallet.id);
     const count = transactions.filter(
-      t => t.wallet === wallet.name || t.toWalletId === wallet.id
+      t => t.walletId === wallet.name || t.toWalletId === wallet.id
     ).length;
     const walletType = wallet.type ?? 'checking';
     const badge = TYPE_BADGE[walletType];
@@ -178,7 +178,7 @@ export default function WalletsScreen() {
                 </View>
                 {(() => {
                   const last = transactions
-                    .filter(t => t.wallet === wallet.name || t.toWalletId === wallet.id)
+                    .filter(t => t.walletId === wallet.name || t.toWalletId === wallet.id)
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                   return (
                     <Text className="text-textSecondary text-xs">

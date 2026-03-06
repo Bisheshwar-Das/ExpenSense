@@ -1,13 +1,12 @@
-// screens/HubScreen.tsx
+// src/screens/hub/HubScreen.tsx
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AppHeader from '@/components/AppHeader';
-import { RootNavigationProp } from '@/navigation/types';
-import { useSettings } from '@/contexts/SettingsContext';
+import AppHeader from '../../components/AppHeader';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const comingSoon = (feature: string) =>
   Alert.alert('Coming Soon 🚀', `${feature} will be available in a future update.`);

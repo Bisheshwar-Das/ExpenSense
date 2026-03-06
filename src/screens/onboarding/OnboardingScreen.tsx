@@ -1,22 +1,11 @@
-// screens/OnboardingScreen.tsx
+// src/screens/auth/OnboardingScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useOnboarding } from '../contexts/OnboardingContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { useWallets } from '../contexts/WalletContext';
-
-// Available currencies
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
-  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
-  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
-  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
-];
+import { useOnboarding } from '../../contexts/OnboardingContext';
+import { useSettings, CURRENCIES } from '../../contexts/SettingsContext';
+import { useWallets } from '../../contexts/WalletContext';
+import { Ionicons } from '@expo/vector-icons';
 
 // Default wallet options
 const DEFAULT_WALLETS = [
@@ -28,23 +17,28 @@ const DEFAULT_WALLETS = [
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { completeOnboarding } = useOnboarding();
+  const { completeOnboarding, updateProfile } = useOnboarding();
   const { setCurrency } = useSettings();
   const { addWallet } = useWallets();
 
-  const [step, setStep] = useState(1); // 1: Welcome, 2: Currency, 3: Wallet, 4: Done
+  const [step, setStep] = useState(1); // 1: Welcome, 2: Currency, 3: Wallet, 4: Profile, 5: Done
   const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
   const [selectedWallet, setSelectedWallet] = useState(DEFAULT_WALLETS[0]);
   const [customWalletName, setCustomWalletName] = useState('');
   const [isCustomWallet, setIsCustomWallet] = useState(false);
+  const [userName, setUserName] = useState('');
 
   const handleNext = async () => {
     if (step === 1) {
       setStep(2);
     } else if (step === 2) {
       // Save currency selection
-      await setCurrency(selectedCurrency);
-      setStep(3);
+      try {
+        await setCurrency(selectedCurrency);
+        setStep(3);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save currency');
+      }
     } else if (step === 3) {
       // Create wallet
       try {
@@ -61,6 +55,7 @@ export default function OnboardingScreen() {
           name: walletName,
           icon: walletIcon,
           color: walletColor,
+          type: 'checking',
         });
 
         setStep(4);
@@ -68,8 +63,27 @@ export default function OnboardingScreen() {
         Alert.alert('Error', 'Failed to create wallet. Please try again.');
       }
     } else if (step === 4) {
+      // Save profile
+      try {
+        await updateProfile({
+          name: userName,
+        });
+        setStep(5);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save profile');
+      }
+    } else if (step === 5) {
       // Complete onboarding
-      await completeOnboarding();
+      try {
+        await completeOnboarding({
+          name: userName,
+          avatarUri: undefined,
+          homeCurrency: selectedCurrency.code,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        Alert.alert('Error', 'Failed to complete onboarding');
+      }
     }
   };
 
@@ -79,21 +93,38 @@ export default function OnboardingScreen() {
     }
   };
 
-  // Welcome Screen
+  // Step 1: Welcome Screen
   if (step === 1) {
     return (
-      <View className="flex-1 bg-primary" style={{ paddingTop: insets.top }}>
-        <View className="flex-1 justify-center items-center px-8">
-          <Text className="text-6xl mb-6">💰</Text>
-          <Text className="text-white text-4xl font-bold mb-3 text-center">
+      <View style={{ flex: 1, backgroundColor: '#14B8A6', paddingTop: insets.top }}>
+        <View
+          style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}
+        >
+          <Text style={{ fontSize: 60, marginBottom: 24 }}>💰</Text>
+          <Text
+            style={{
+              color: '#FFF',
+              fontSize: 36,
+              fontWeight: '800',
+              marginBottom: 12,
+              textAlign: 'center',
+            }}
+          >
             Welcome to Expen$ense
           </Text>
-          <Text className="text-white/80 text-lg text-center mb-8">
+          <Text
+            style={{
+              color: 'rgba(255,255,255,0.8)',
+              fontSize: 16,
+              textAlign: 'center',
+              marginBottom: 32,
+            }}
+          >
             Your personal finance manager. Track expenses, manage budgets, and achieve your savings
             goals.
           </Text>
 
-          <View className="w-full space-y-4">
+          <View style={{ width: '100%', gap: 12 }}>
             <FeatureItem icon="📊" text="Track your spending habits" />
             <FeatureItem icon="💳" text="Manage multiple wallets" />
             <FeatureItem icon="🎯" text="Set and achieve financial goals" />
@@ -101,86 +132,150 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        <View className="px-8 pb-8">
-          <TouchableOpacity onPress={handleNext} className="bg-white py-4 rounded-2xl items-center">
-            <Text className="text-primary text-lg font-semibold">Get Started</Text>
+        <View style={{ paddingHorizontal: 32, paddingBottom: 32 }}>
+          <TouchableOpacity
+            onPress={handleNext}
+            style={{
+              backgroundColor: '#FFF',
+              paddingVertical: 16,
+              borderRadius: 16,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#14B8A6', fontSize: 16, fontWeight: '600' }}>Get Started</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  // Currency Selection
+  // Step 2: Currency Selection
   if (step === 2) {
     return (
-      <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-        <View className="bg-primary px-8 py-6 rounded-b-[30px]">
-          <TouchableOpacity onPress={handleBack} className="mb-4">
-            <Text className="text-white text-lg">← Back</Text>
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC', paddingTop: insets.top }}>
+        <View
+          style={{
+            backgroundColor: '#14B8A6',
+            paddingHorizontal: 24,
+            paddingVertical: 16,
+            borderBottomLeftRadius: 30,
+            borderBottomRightRadius: 30,
+          }}
+        >
+          <TouchableOpacity onPress={handleBack} style={{ marginBottom: 12 }}>
+            <Text style={{ color: '#FFF', fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text className="text-white text-3xl font-bold mb-2">Choose Your Currency</Text>
-          <Text className="text-white/80 text-base">Select the currency you'll use most often</Text>
+          <Text style={{ color: '#FFF', fontSize: 28, fontWeight: '800', marginBottom: 4 }}>
+            Choose Your Currency
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
+            Select the currency you'll use most often
+          </Text>
         </View>
 
-        <ScrollView className="flex-1 px-6 py-6">
+        <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }}>
           {CURRENCIES.map(currency => (
             <TouchableOpacity
               key={currency.code}
               onPress={() => setSelectedCurrency(currency)}
-              className={`flex-row items-center justify-between p-4 mb-3 rounded-2xl ${
-                selectedCurrency.code === currency.code
-                  ? 'bg-primary/10 border-2 border-primary'
-                  : 'bg-card'
-              }`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                marginBottom: 12,
+                borderRadius: 16,
+                backgroundColor:
+                  selectedCurrency.code === currency.code ? 'rgba(20,184,166,0.1)' : '#FFF',
+                borderWidth: selectedCurrency.code === currency.code ? 2 : 1,
+                borderColor: selectedCurrency.code === currency.code ? '#14B8A6' : '#E2E8F0',
+              }}
             >
-              <View className="flex-row items-center">
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
-                  className={`w-12 h-12 rounded-xl items-center justify-center mr-3 ${
-                    selectedCurrency.code === currency.code ? 'bg-primary' : 'bg-primary/20'
-                  }`}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 12,
+                    backgroundColor:
+                      selectedCurrency.code === currency.code ? '#14B8A6' : 'rgba(20,184,166,0.1)',
+                  }}
                 >
-                  <Text
-                    className={`text-2xl ${selectedCurrency.code === currency.code ? 'text-white' : 'text-primary'}`}
-                  >
-                    {currency.symbol}
-                  </Text>
+                  <Text style={{ fontSize: 24 }}>{currency.symbol}</Text>
                 </View>
                 <View>
-                  <Text className="text-textPrimary font-semibold text-base">{currency.name}</Text>
-                  <Text className="text-textSecondary text-sm">{currency.code}</Text>
+                  <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 16 }}>
+                    {currency.name}
+                  </Text>
+                  <Text style={{ color: '#64748B', fontSize: 14, marginTop: 2 }}>
+                    {currency.code}
+                  </Text>
                 </View>
               </View>
               {selectedCurrency.code === currency.code && (
-                <Text className="text-primary text-2xl">✓</Text>
+                <Text style={{ color: '#14B8A6', fontSize: 24 }}>✓</Text>
               )}
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        <View className="px-8 py-6 bg-white border-t border-border">
-          <TouchableOpacity onPress={handleNext} className="bg-primary py-4 rounded-2xl">
-            <Text className="text-white text-lg font-semibold text-center">Continue</Text>
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingVertical: 24,
+            borderTopWidth: 1,
+            borderTopColor: '#E2E8F0',
+          }}
+        >
+          <TouchableOpacity
+            onPress={handleNext}
+            style={{
+              backgroundColor: '#14B8A6',
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Continue</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  // Wallet Creation
+  // Step 3: Wallet Creation
   if (step === 3) {
     return (
-      <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-        <View className="bg-primary px-8 py-6 rounded-b-[30px]">
-          <TouchableOpacity onPress={handleBack} className="mb-4">
-            <Text className="text-white text-lg">← Back</Text>
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC', paddingTop: insets.top }}>
+        <View
+          style={{
+            backgroundColor: '#14B8A6',
+            paddingHorizontal: 24,
+            paddingVertical: 16,
+            borderBottomLeftRadius: 30,
+            borderBottomRightRadius: 30,
+          }}
+        >
+          <TouchableOpacity onPress={handleBack} style={{ marginBottom: 12 }}>
+            <Text style={{ color: '#FFF', fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text className="text-white text-3xl font-bold mb-2">Create Your First Wallet</Text>
-          <Text className="text-white/80 text-base">Choose a preset or create custom</Text>
+          <Text style={{ color: '#FFF', fontSize: 28, fontWeight: '800', marginBottom: 4 }}>
+            Create Your First Wallet
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
+            Choose a preset or create custom
+          </Text>
         </View>
 
-        <ScrollView className="flex-1 px-6 py-6">
+        <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }}>
           {/* Preset Wallets */}
-          <Text className="text-textPrimary text-lg font-semibold mb-4">Quick Setup</Text>
+          <Text style={{ color: '#0F172A', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
+            Quick Setup
+          </Text>
           {DEFAULT_WALLETS.map(wallet => (
             <TouchableOpacity
               key={wallet.name}
@@ -188,74 +283,268 @@ export default function OnboardingScreen() {
                 setSelectedWallet(wallet);
                 setIsCustomWallet(false);
               }}
-              className={`flex-row items-center p-4 mb-3 rounded-2xl ${
-                !isCustomWallet && selectedWallet.name === wallet.name
-                  ? 'bg-primary/10 border-2 border-primary'
-                  : 'bg-card'
-              }`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                marginBottom: 12,
+                borderRadius: 16,
+                backgroundColor:
+                  !isCustomWallet && selectedWallet.name === wallet.name
+                    ? 'rgba(20,184,166,0.1)'
+                    : '#FFF',
+                borderWidth: !isCustomWallet && selectedWallet.name === wallet.name ? 2 : 1,
+                borderColor:
+                  !isCustomWallet && selectedWallet.name === wallet.name ? '#14B8A6' : '#E2E8F0',
+              }}
             >
               <View
-                className="w-12 h-12 rounded-xl items-center justify-center mr-3"
-                style={{ backgroundColor: wallet.color + '20' }}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                  backgroundColor: wallet.color + '20',
+                }}
               >
-                <Text className="text-2xl">{wallet.icon}</Text>
+                <Text style={{ fontSize: 24 }}>{wallet.icon}</Text>
               </View>
-              <Text className="flex-1 text-textPrimary font-semibold text-base">{wallet.name}</Text>
+              <Text style={{ flex: 1, color: '#0F172A', fontWeight: '600', fontSize: 16 }}>
+                {wallet.name}
+              </Text>
               {!isCustomWallet && selectedWallet.name === wallet.name && (
-                <Text className="text-primary text-2xl">✓</Text>
+                <Text style={{ color: '#14B8A6', fontSize: 24 }}>✓</Text>
               )}
             </TouchableOpacity>
           ))}
 
           {/* Custom Wallet */}
-          <Text className="text-textPrimary text-lg font-semibold mb-4 mt-6">Or Create Custom</Text>
-          <TouchableOpacity
-            onPress={() => setIsCustomWallet(true)}
-            className={`p-4 rounded-2xl ${isCustomWallet ? 'bg-primary/10 border-2 border-primary' : 'bg-card'}`}
+          <Text
+            style={{
+              color: '#0F172A',
+              fontSize: 16,
+              fontWeight: '600',
+              marginBottom: 12,
+              marginTop: 24,
+            }}
           >
-            <Text className="text-textPrimary font-medium text-base mb-3">Custom Wallet Name</Text>
+            Or Create Custom
+          </Text>
+          <View
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderRadius: 16,
+              backgroundColor: isCustomWallet ? 'rgba(20,184,166,0.1)' : '#FFF',
+              borderWidth: isCustomWallet ? 2 : 1,
+              borderColor: isCustomWallet ? '#14B8A6' : '#E2E8F0',
+            }}
+          >
+            <Text style={{ color: '#0F172A', fontWeight: '500', fontSize: 16, marginBottom: 12 }}>
+              Custom Wallet Name
+            </Text>
             <TextInput
               value={customWalletName}
               onChangeText={setCustomWalletName}
               placeholder="e.g., Business Account"
               placeholderTextColor="#94A3B8"
-              className="bg-background p-4 rounded-xl text-textPrimary text-base"
+              style={{
+                backgroundColor: '#F8FAFC',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 12,
+                color: '#0F172A',
+                fontSize: 16,
+              }}
               onFocus={() => setIsCustomWallet(true)}
             />
-          </TouchableOpacity>
+          </View>
         </ScrollView>
 
-        <View className="px-8 py-6 bg-white border-t border-border">
-          <TouchableOpacity onPress={handleNext} className="bg-primary py-4 rounded-2xl">
-            <Text className="text-white text-lg font-semibold text-center">Create Wallet</Text>
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingVertical: 24,
+            borderTopWidth: 1,
+            borderTopColor: '#E2E8F0',
+          }}
+        >
+          <TouchableOpacity
+            onPress={handleNext}
+            style={{
+              backgroundColor: '#14B8A6',
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Create Wallet</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  // Success Screen
+  // Step 4: Profile Setup
+  if (step === 4) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC', paddingTop: insets.top }}>
+        <View
+          style={{
+            backgroundColor: '#14B8A6',
+            paddingHorizontal: 24,
+            paddingVertical: 16,
+            borderBottomLeftRadius: 30,
+            borderBottomRightRadius: 30,
+          }}
+        >
+          <TouchableOpacity onPress={handleBack} style={{ marginBottom: 12 }}>
+            <Text style={{ color: '#FFF', fontSize: 16 }}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={{ color: '#FFF', fontSize: 28, fontWeight: '800', marginBottom: 4 }}>
+            Tell Us About You
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
+            Personalize your experience
+          </Text>
+        </View>
+
+        <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingTop: 24 }}>
+          <Text
+            style={{
+              color: '#64748B',
+              fontSize: 12,
+              fontWeight: '600',
+              marginBottom: 8,
+              textTransform: 'uppercase',
+            }}
+          >
+            Full Name
+          </Text>
+          <TextInput
+            value={userName}
+            onChangeText={setUserName}
+            placeholder="John Doe"
+            placeholderTextColor="#94A3B8"
+            style={{
+              backgroundColor: '#FFF',
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderRadius: 12,
+              color: '#0F172A',
+              fontSize: 16,
+              marginBottom: 20,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+            }}
+          />
+
+          <View
+            style={{
+              backgroundColor: '#FFF',
+              paddingHorizontal: 16,
+              paddingVertical: 16,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+            }}
+          >
+            <Text style={{ color: '#0F172A', fontSize: 14 }}>
+              Your profile helps us personalize your experience.
+            </Text>
+          </View>
+        </ScrollView>
+
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingVertical: 24,
+            borderTopWidth: 1,
+            borderTopColor: '#E2E8F0',
+          }}
+        >
+          <TouchableOpacity
+            onPress={handleNext}
+            style={{
+              backgroundColor: '#14B8A6',
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Step 5: Success Screen
   return (
-    <View className="flex-1 bg-primary" style={{ paddingTop: insets.top }}>
-      <View className="flex-1 justify-center items-center px-8">
-        <Text className="text-6xl mb-6">🎉</Text>
-        <Text className="text-white text-4xl font-bold mb-3 text-center">All Set!</Text>
-        <Text className="text-white/80 text-lg text-center mb-8">
+    <View style={{ flex: 1, backgroundColor: '#14B8A6', paddingTop: insets.top }}>
+      <View
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}
+      >
+        <Text style={{ fontSize: 60, marginBottom: 24 }}>🎉</Text>
+        <Text
+          style={{
+            color: '#FFF',
+            fontSize: 36,
+            fontWeight: '800',
+            marginBottom: 12,
+            textAlign: 'center',
+          }}
+        >
+          All Set!
+        </Text>
+        <Text
+          style={{
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: 16,
+            textAlign: 'center',
+            marginBottom: 32,
+          }}
+        >
           You're ready to start tracking your finances. Let's add your first transaction!
         </Text>
 
-        <View className="w-full bg-white/15 p-6 rounded-2xl mb-6">
+        <View
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.2)',
+            borderRadius: 12,
+            paddingHorizontal: 20,
+            paddingVertical: 20,
+            width: '100%',
+            marginBottom: 24,
+          }}
+        >
           <InfoRow label="Currency" value={`${selectedCurrency.symbol} ${selectedCurrency.code}`} />
           <InfoRow
             label="First Wallet"
             value={isCustomWallet ? customWalletName : selectedWallet.name}
           />
+          <InfoRow label="Name" value={userName || 'Not provided'} />
         </View>
       </View>
 
-      <View className="px-8 pb-8">
-        <TouchableOpacity onPress={handleNext} className="bg-white py-4 rounded-2xl items-center">
-          <Text className="text-primary text-lg font-semibold">Start Using Expen$ense</Text>
+      <View style={{ paddingHorizontal: 32, paddingBottom: 32 }}>
+        <TouchableOpacity
+          onPress={handleNext}
+          style={{
+            backgroundColor: '#FFF',
+            paddingVertical: 16,
+            borderRadius: 16,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#14B8A6', fontSize: 16, fontWeight: '600' }}>
+            Start Using Expen$ense
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -265,20 +554,39 @@ export default function OnboardingScreen() {
 // Helper Components
 function FeatureItem({ icon, text }: { icon: string; text: string }) {
   return (
-    <View className="flex-row items-center">
-      <View className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center mr-3">
-        <Text className="text-xl">{icon}</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 12,
+        }}
+      >
+        <Text style={{ fontSize: 18 }}>{icon}</Text>
       </View>
-      <Text className="text-white/90 text-base">{text}</Text>
+      <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 16 }}>{text}</Text>
     </View>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-row justify-between items-center py-3 border-b border-white/10 last:border-b-0">
-      <Text className="text-white/70 text-base">{label}</Text>
-      <Text className="text-white font-semibold text-base">{value}</Text>
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.1)',
+      }}
+    >
+      <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>{label}</Text>
+      <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14 }}>{value}</Text>
     </View>
   );
 }

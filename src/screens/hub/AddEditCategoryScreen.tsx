@@ -1,4 +1,4 @@
-// screens/hub/AddEditCategoryScreen.tsx
+// src/screens/hub/AddEditCategoryScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -15,10 +15,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCategories } from '../../contexts/CategoryContext';
-import { WALLET_COLORS } from '../../types';
-import { CategoryType } from '../../types';
+import { WALLET_COLORS, CategoryType } from '../../types';
 import { AddEditCategoryRouteProp, RootNavigationProp } from '../../navigation/types';
-import AppHeader from '@/components/AppHeader';
+import AppHeader from '../../components/AppHeader';
 
 const PRESET_ICONS = [
   '🍔',
@@ -64,15 +63,11 @@ export default function AddEditCategoryScreen() {
   const navigation = useNavigation<RootNavigationProp>();
   const route = useRoute<AddEditCategoryRouteProp>();
   const insets = useSafeAreaInsets();
-  const { expenseCategories, incomeCategories, addCategory, updateCategory, isDefault } =
-    useCategories();
+  const { getCategoryById, addCategory, updateCategory } = useCategories();
 
   const { categoryId, defaultType = 'expense' } = route.params ?? {};
   const isEditing = !!categoryId;
-
-  const existingCategory = [...expenseCategories, ...incomeCategories].find(
-    c => c.id === categoryId
-  );
+  const existingCategory = categoryId ? getCategoryById(categoryId) : undefined;
 
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('📦');
@@ -80,29 +75,41 @@ export default function AddEditCategoryScreen() {
   const [showCustom, setShowCustom] = useState(false);
   const [color, setColor] = useState(WALLET_COLORS[0].value);
   const [type, setType] = useState<CategoryType>(defaultType);
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (existingCategory) {
       setName(existingCategory.name);
       setIcon(existingCategory.icon);
-      setColor((existingCategory as any).color ?? WALLET_COLORS[0].value);
-      setType(existingCategory.type as CategoryType);
+      setColor(existingCategory.color);
+      setType(existingCategory.type);
     }
   }, [categoryId]);
 
   const effectiveIcon = customIcon.trim() || icon;
+  const isValid = name.trim().length > 0;
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('Name required', 'Please enter a category name.');
-      return;
+    if (!isValid || isSaving) return;
+    setError('');
+    setIsSaving(true);
+    try {
+      if (isEditing && categoryId) {
+        await updateCategory(categoryId, {
+          name: name.trim(),
+          icon: effectiveIcon,
+          color,
+        });
+      } else {
+        await addCategory({ name: name.trim(), icon: effectiveIcon, color, type });
+      }
+      navigation.goBack();
+    } catch (e: any) {
+      setError(e.message ?? 'Something went wrong.');
+    } finally {
+      setIsSaving(false);
     }
-    if (isEditing && categoryId) {
-      await updateCategory(categoryId, { name: name.trim(), icon: effectiveIcon, color });
-    } else {
-      await addCategory({ name: name.trim(), icon: effectiveIcon, color, type });
-    }
-    navigation.goBack();
   };
 
   return (
@@ -113,20 +120,9 @@ export default function AddEditCategoryScreen() {
       <AppHeader
         title={isEditing ? 'Edit Category' : 'New Category'}
         onBack={() => navigation.goBack()}
+        onEdit={handleSave}
+        editLabel={isSaving ? '...' : 'Save'}
         hideMenu
-        rightAction={
-          <TouchableOpacity
-            onPress={handleSave}
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              borderRadius: 20,
-              paddingHorizontal: 14,
-              paddingVertical: 6,
-            }}
-          >
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Save</Text>
-          </TouchableOpacity>
-        }
       />
 
       <ScrollView
@@ -162,6 +158,23 @@ export default function AddEditCategoryScreen() {
           </Text>
         </View>
 
+        {/* Error */}
+        {error ? (
+          <View
+            style={{
+              backgroundColor: '#FEF2F2',
+              borderRadius: 12,
+              padding: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Ionicons name="alert-circle" size={16} color="#EF4444" />
+            <Text style={{ color: '#EF4444', fontSize: 13, flex: 1 }}>{error}</Text>
+          </View>
+        ) : null}
+
         {/* Type toggle — only for new */}
         {!isEditing && (
           <View>
@@ -173,17 +186,16 @@ export default function AddEditCategoryScreen() {
                 borderRadius: 16,
                 padding: 4,
                 gap: 4,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 1,
+                ...cardShadow,
               }}
             >
               {TAB_TYPES.map(t => (
                 <TouchableOpacity
                   key={t.value}
-                  onPress={() => setType(t.value)}
+                  onPress={() => {
+                    setType(t.value);
+                    setError('');
+                  }}
                   style={{
                     flex: 1,
                     paddingVertical: 12,
@@ -218,7 +230,10 @@ export default function AddEditCategoryScreen() {
           <View style={inputCard}>
             <TextInput
               value={name}
-              onChangeText={setName}
+              onChangeText={v => {
+                setName(v);
+                setError('');
+              }}
               placeholder="e.g., Groceries, Side hustle…"
               placeholderTextColor="#CBD5E1"
               style={{ fontSize: 16, color: '#0F172A' }}
@@ -252,11 +267,7 @@ export default function AddEditCategoryScreen() {
                     backgroundColor: isSelected ? color + '30' : '#fff',
                     borderWidth: isSelected ? 2 : 0,
                     borderColor: isSelected ? color : 'transparent',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.04,
-                    shadowRadius: 2,
-                    elevation: 1,
+                    ...cardShadow,
                   }}
                 >
                   <Text style={{ fontSize: 26 }}>{em}</Text>
@@ -265,7 +276,7 @@ export default function AddEditCategoryScreen() {
             })}
           </View>
 
-          {/* Custom icon */}
+          {/* Custom icon toggle */}
           <TouchableOpacity
             onPress={() => setShowCustom(v => !v)}
             style={{
@@ -321,7 +332,7 @@ export default function AddEditCategoryScreen() {
                   borderColor: '#fff',
                   shadowColor: color === c.value ? c.value : 'transparent',
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.6,
+                  shadowOpacity: 0.5,
                   shadowRadius: 4,
                   elevation: color === c.value ? 5 : 0,
                 }}
@@ -345,14 +356,18 @@ const labelStyle = {
   marginBottom: 8,
 };
 
-const inputCard = {
-  backgroundColor: '#fff',
-  borderRadius: 16,
-  paddingHorizontal: 16,
-  paddingVertical: 13,
+const cardShadow = {
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.05,
   shadowRadius: 3,
   elevation: 1,
+};
+
+const inputCard = {
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  paddingHorizontal: 16,
+  paddingVertical: 13,
+  ...cardShadow,
 };

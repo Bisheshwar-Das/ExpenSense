@@ -1,4 +1,4 @@
-// screens/AddTransactionScreen.tsx
+// src/screens/transactions/AddTransactionScreen.tsx
 import React, { useState, useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
@@ -11,7 +11,6 @@ import {
   Alert,
   Modal,
   Pressable,
-  Image,
   ActivityIndicator,
   Animated,
 } from 'react-native';
@@ -26,33 +25,14 @@ import TransferToPicker from '../../components/pickers/TransferToPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
-import AppHeader from '@/components/AppHeader';
+import AppHeader from '../../components/AppHeader';
 
 export type FullTransactionType = 'expense' | 'income' | 'transfer';
 
 const TYPE_CONFIG = {
-  expense: {
-    label: 'Expense',
-    symbol: '−',
-    color: '#EF4444',
-    bg: '#FEF2F2',
-    toggleClass: 'bg-expense',
-  },
-  income: {
-    label: 'Income',
-    symbol: '+',
-    color: '#22C55E',
-    bg: '#F0FDF4',
-    toggleClass: 'bg-income',
-  },
-  transfer: {
-    label: '⇄ Transfer',
-    symbol: '⇄',
-    color: '#14B8A6',
-    bg: '#F0FDF9',
-    toggleClass: 'bg-primary',
-  },
+  expense: { label: 'Expense', symbol: '−', color: '#EF4444', bg: '#FEF2F2' },
+  income: { label: 'Income', symbol: '+', color: '#22C55E', bg: '#F0FDF4' },
+  transfer: { label: '⇄ Transfer', symbol: '⇄', color: '#14B8A6', bg: '#F0FDF9' },
 } as const;
 
 interface FormState {
@@ -60,20 +40,19 @@ interface FormState {
   amount: string;
   type: FullTransactionType;
   selectedCategory: Category | null;
-  selectedWallet: string;
+  selectedWalletId: string;
   toWalletId: string;
   toGoalId: string;
   notes: string;
   date: Date;
   hasTime: boolean;
-  attachmentUri: string | null;
 }
 
 type FormAction =
   | { type: 'SET_FIELD'; field: keyof FormState; value: FormState[keyof FormState] }
   | { type: 'SET_TYPE'; value: FullTransactionType }
   | { type: 'SET_TRANSFER_DEST'; toWalletId: string; toGoalId: string }
-  | { type: 'RESET'; defaultWallet: string };
+  | { type: 'RESET'; defaultWalletId: string };
 
 function formReducer(state: FormState, action: FormAction): FormState {
   switch (action.type) {
@@ -89,21 +68,14 @@ function formReducer(state: FormState, action: FormAction): FormState {
         amount: '',
         type: 'expense',
         selectedCategory: null,
-        selectedWallet: action.defaultWallet,
+        selectedWalletId: action.defaultWalletId,
         toWalletId: '',
         toGoalId: '',
         notes: '',
         date: new Date(),
         hasTime: false,
-        attachmentUri: null,
       };
   }
-}
-
-interface SavedSnapshot {
-  amount: string;
-  title: string;
-  type: FullTransactionType;
 }
 
 function parseAmountParts(amount: string) {
@@ -136,20 +108,19 @@ export default function AddTransactionScreen() {
   const successScale = useRef(new Animated.Value(0.88)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
 
-  const defaultWallet = wallets[0]?.name ?? '';
+  const defaultWalletId = wallets[0]?.id ?? '';
 
   const [form, dispatch] = useReducer(formReducer, {
     title: '',
     amount: '',
     type: 'expense',
     selectedCategory: null,
-    selectedWallet: defaultWallet,
+    selectedWalletId: defaultWalletId,
     toWalletId: '',
     toGoalId: '',
     notes: '',
     date: new Date(),
     hasTime: false,
-    attachmentUri: null,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -157,12 +128,16 @@ export default function AddTransactionScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [snapshot, setSnapshot] = useState<SavedSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<{
+    amount: string;
+    title: string;
+    type: FullTransactionType;
+  } | null>(null);
 
   useEffect(() => {
-    if (wallets.length > 0 && !form.selectedWallet)
-      dispatch({ type: 'SET_FIELD', field: 'selectedWallet', value: wallets[0].name });
-  }, [wallets, form.selectedWallet]);
+    if (wallets.length > 0 && !form.selectedWalletId)
+      dispatch({ type: 'SET_FIELD', field: 'selectedWalletId', value: wallets[0].id });
+  }, [wallets]);
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -187,17 +162,12 @@ export default function AddTransactionScreen() {
 
   const isValid = useMemo(() => {
     const base = form.title.trim() !== '' && form.amount !== '' && parseFloat(form.amount) > 0;
-    if (form.type === 'transfer') return base;
-    return base && form.selectedCategory !== null;
+    return form.type === 'transfer' ? base : base && form.selectedCategory !== null;
   }, [form]);
 
   const setField = useCallback(
     <K extends keyof FormState>(field: K, value: FormState[K]) =>
       dispatch({ type: 'SET_FIELD', field, value }),
-    []
-  );
-  const handleTypeChange = useCallback(
-    (value: FullTransactionType) => dispatch({ type: 'SET_TYPE', value }),
     []
   );
 
@@ -208,99 +178,59 @@ export default function AddTransactionScreen() {
     dispatch({ type: 'SET_FIELD', field: 'date', value: d });
   }, [form.date]);
 
-  const handlePickFromLibrary = useCallback(async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow access to your photo library.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled) setField('attachmentUri', result.assets[0].uri);
-  }, []);
-
-  const handleTakePhoto = useCallback(async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow camera access.');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
-    if (!result.canceled) setField('attachmentUri', result.assets[0].uri);
-  }, []);
-
-  const handleAttachmentPress = useCallback(() => {
-    Alert.alert('Add Attachment', '', [
-      { text: 'Take Photo', onPress: handleTakePhoto },
-      { text: 'Choose from Library', onPress: handlePickFromLibrary },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }, [handleTakePhoto, handlePickFromLibrary]);
-
   const handleSave = useCallback(async () => {
     if (!isValid || isSaving) return;
-    if (form.type === 'transfer' && form.toWalletId) {
-      const fromWallet = wallets.find(w => w.name === form.selectedWallet);
-      if (fromWallet?.id === form.toWalletId) {
-        Alert.alert('Invalid Transfer', 'Source and destination wallet must be different.');
-        return;
-      }
+    if (form.type === 'transfer' && form.toWalletId && form.toWalletId === form.selectedWalletId) {
+      Alert.alert('Invalid Transfer', 'Source and destination wallet must be different.');
+      return;
     }
     setIsSaving(true);
     try {
       const num = parseFloat(form.amount);
       await addTransaction({
         title: form.title.trim(),
-        amount: form.type === 'expense' ? -num : num,
-        type: form.type === 'transfer' ? 'transfer' : form.type,
-        category: form.type === 'transfer' ? 'Transfer' : (form.selectedCategory?.name ?? ''),
-        categoryId: form.type === 'transfer' ? undefined : (form.selectedCategory?.id ?? undefined),
+        amount: num,
+        type: form.type,
+        categoryId: form.type === 'transfer' ? 'transfer' : (form.selectedCategory?.id ?? ''),
+        walletId: form.selectedWalletId,
         date: form.date.toISOString(),
         hasTime: form.hasTime,
-        wallet: form.selectedWallet,
-        notes: form.notes,
-        receiptUri: form.attachmentUri ?? undefined,
-        ...(form.type === 'transfer' && form.toWalletId ? { toWalletId: form.toWalletId } : {}),
-        ...(form.type === 'transfer' && form.toGoalId ? { toGoalId: form.toGoalId } : {}),
+        notes: form.notes || undefined,
+        toWalletId: form.type === 'transfer' && form.toWalletId ? form.toWalletId : undefined,
+        toGoalId: form.type === 'transfer' && form.toGoalId ? form.toGoalId : undefined,
       });
       setSnapshot({ amount: form.amount, title: form.title.trim(), type: form.type });
       setShowSuccessModal(true);
     } catch {
-      Alert.alert('Something went wrong', 'Your transaction could not be saved. Please try again.');
+      Alert.alert('Error', 'Failed to save transaction. Please try again.');
     } finally {
       setIsSaving(false);
     }
-  }, [form, isValid, isSaving, wallets, addTransaction]);
+  }, [form, isValid, isSaving, addTransaction]);
 
   const handleAddAnother = useCallback(() => {
     setShowSuccessModal(false);
-    dispatch({ type: 'RESET', defaultWallet });
+    dispatch({ type: 'RESET', defaultWalletId });
     setTimeout(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
       amountInputRef.current?.focus();
     }, 100);
-  }, [defaultWallet]);
+  }, [defaultWalletId]);
 
   const handleDone = useCallback(() => {
     setShowSuccessModal(false);
-    dispatch({ type: 'RESET', defaultWallet });
+    dispatch({ type: 'RESET', defaultWalletId });
     navigation.goBack();
-  }, [navigation, defaultWallet]);
+  }, [navigation, defaultWalletId]);
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-background"
+      style={{ flex: 1 }}
     >
       <AppHeader
         title="Add Transaction"
-        onBack={() => {
-          dispatch({ type: 'RESET', defaultWallet });
-          navigation.goBack();
-        }}
+        onBack={() => navigation.goBack()}
         onEdit={handleSave}
         editLabel="Save"
         hideMenu
@@ -309,7 +239,7 @@ export default function AddTransactionScreen() {
 
       <ScrollView
         ref={scrollRef}
-        className="flex-1"
+        style={{ flex: 1, backgroundColor: '#F8FAFC' }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
@@ -319,11 +249,17 @@ export default function AddTransactionScreen() {
           <TouchableOpacity
             activeOpacity={1}
             onPress={() => amountInputRef.current?.focus()}
-            className="items-center"
-            style={{ paddingTop: 4, paddingBottom: 36 }}
+            style={{ alignItems: 'center', paddingTop: 4, paddingBottom: 36 }}
           >
-            <View className="flex-row items-center">
-              <Text className="text-white/60 font-bold mr-1" style={{ fontSize: 42 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text
+                style={{
+                  color: 'rgba(255,255,255,0.6)',
+                  fontWeight: '700',
+                  marginRight: 4,
+                  fontSize: 42,
+                }}
+              >
                 {currency.symbol}
               </Text>
               <View>
@@ -334,16 +270,15 @@ export default function AddTransactionScreen() {
                   keyboardType="decimal-pad"
                   style={{ position: 'absolute', opacity: 0, width: 200, height: '100%' }}
                 />
-                <View className="flex-row items-baseline">
+                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                   <Text
-                    className="text-white font-extrabold"
-                    style={{ fontSize: 52, letterSpacing: -1 }}
+                    style={{ color: '#fff', fontWeight: '800', fontSize: 52, letterSpacing: -1 }}
                   >
                     {displayAmount.dollars || '0'}
                   </Text>
                   <Text
-                    className="font-extrabold"
                     style={{
+                      fontWeight: '800',
                       fontSize: 52,
                       letterSpacing: -1,
                       color: displayAmount.hasDecimal ? '#fff' : 'rgba(255,255,255,0.3)',
@@ -354,37 +289,50 @@ export default function AddTransactionScreen() {
                 </View>
               </View>
             </View>
-            <Text className="text-white/60 text-sm mt-2">Tap to enter amount</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginTop: 8 }}>
+              Tap to enter amount
+            </Text>
           </TouchableOpacity>
-          <View className="bg-background rounded-t-3xl" style={{ height: 28 }} />
+          <View
+            style={{
+              backgroundColor: '#F8FAFC',
+              height: 28,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+            }}
+          />
         </View>
 
-        <View className="px-4 gap-3" style={{ marginTop: -14 }}>
+        <View style={{ paddingHorizontal: 16, gap: 12, marginTop: -14 }}>
           {/* Type toggle */}
           <View
-            className="bg-card rounded-2xl p-1.5 flex-row gap-1"
             style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 3,
-              elevation: 1,
+              backgroundColor: '#FFF',
+              borderRadius: 16,
+              padding: 6,
+              flexDirection: 'row',
+              gap: 4,
             }}
           >
             {(Object.keys(TYPE_CONFIG) as FullTransactionType[]).map(t => {
               const active = form.type === t;
-              const tc = TYPE_CONFIG[t];
               return (
                 <TouchableOpacity
                   key={t}
-                  onPress={() => handleTypeChange(t)}
+                  onPress={() => dispatch({ type: 'SET_TYPE', value: t })}
                   activeOpacity={0.7}
-                  className={`flex-1 py-3 rounded-xl items-center ${active ? tc.toggleClass : ''}`}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    backgroundColor: active ? TYPE_CONFIG[t].color : 'transparent',
+                  }}
                 >
                   <Text
-                    className={`font-semibold text-sm ${active ? 'text-white' : 'text-textSecondary'}`}
+                    style={{ fontWeight: '600', fontSize: 14, color: active ? '#FFF' : '#94A3B8' }}
                   >
-                    {tc.label}
+                    {TYPE_CONFIG[t].label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -393,35 +341,21 @@ export default function AddTransactionScreen() {
 
           {/* Description */}
           <View>
-            <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
-              Description <Text className="text-expense">*</Text>
+            <Text style={labelStyle}>
+              Description <Text style={{ color: '#EF4444' }}>*</Text>
             </Text>
-            <View
-              className="bg-card rounded-2xl"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 1,
-              }}
-            >
-              <TextInput
-                value={form.title}
-                onChangeText={v => setField('title', v)}
-                placeholder={
-                  form.type === 'transfer'
-                    ? 'e.g., Move to vacation fund…'
-                    : 'e.g., Lunch, Monthly salary…'
-                }
-                placeholderTextColor="#CBD5E1"
-                className="text-textPrimary text-base px-4"
-                style={{ paddingVertical: 13 }}
-              />
-            </View>
+            <TextInput
+              value={form.title}
+              onChangeText={v => setField('title', v)}
+              placeholder={
+                form.type === 'transfer' ? 'e.g., Move to savings…' : 'e.g., Lunch, Salary…'
+              }
+              placeholderTextColor="#CBD5E1"
+              style={inputStyle}
+            />
           </View>
 
-          {/* Category — now gets type, pulls categories from context internally */}
+          {/* Category */}
           {form.type !== 'transfer' && (
             <CategoryPicker
               type={form.type}
@@ -433,8 +367,8 @@ export default function AddTransactionScreen() {
           {/* Wallet */}
           <WalletPicker
             label={form.type === 'transfer' ? 'From' : 'Wallet'}
-            selectedWallet={form.selectedWallet}
-            onSelectWallet={v => setField('selectedWallet', v)}
+            selectedWalletId={form.selectedWalletId}
+            onSelectWallet={v => setField('selectedWalletId', v)}
           />
 
           {/* Transfer destination */}
@@ -442,7 +376,7 @@ export default function AddTransactionScreen() {
             <TransferToPicker
               selectedWalletId={form.toWalletId}
               selectedGoalId={form.toGoalId}
-              excludeWalletName={form.selectedWallet}
+              excludeWalletId={form.selectedWalletId}
               onSelectWallet={v =>
                 dispatch({ type: 'SET_TRANSFER_DEST', toWalletId: v, toGoalId: '' })
               }
@@ -454,17 +388,14 @@ export default function AddTransactionScreen() {
 
           {/* Date & Time */}
           <View>
-            <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
-              Date
-            </Text>
+            <Text style={labelStyle}>Date</Text>
             <View
-              className="bg-card rounded-2xl overflow-hidden"
               style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 1,
+                backgroundColor: '#FFF',
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                overflow: 'hidden',
               }}
             >
               <TouchableOpacity
@@ -472,30 +403,42 @@ export default function AddTransactionScreen() {
                   setTempDate(form.date);
                   setShowDatePicker(true);
                 }}
-                className="flex-row items-center px-4 gap-3"
-                style={{ paddingVertical: 13 }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  gap: 12,
+                }}
               >
                 <Ionicons name="calendar-outline" size={18} color="#14B8A6" />
-                <Text className="flex-1 text-textPrimary text-base">{formatDate(form.date)}</Text>
+                <Text style={{ flex: 1, color: '#0F172A', fontSize: 16 }}>
+                  {formatDate(form.date)}
+                </Text>
                 <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
               </TouchableOpacity>
-              <View className="h-px bg-border mx-4" />
+              <View style={{ height: 1, backgroundColor: '#E2E8F0', marginHorizontal: 16 }} />
               {form.hasTime ? (
-                <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 13 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    gap: 12,
+                  }}
+                >
                   <Ionicons name="time-outline" size={18} color="#14B8A6" />
                   <TouchableOpacity
-                    className="flex-1"
+                    style={{ flex: 1 }}
                     onPress={() => {
                       setTempDate(form.date);
                       setShowTimePicker(true);
                     }}
                   >
-                    <Text className="text-textPrimary text-base">{formatTime(form.date)}</Text>
+                    <Text style={{ color: '#0F172A', fontSize: 16 }}>{formatTime(form.date)}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleRemoveTime}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
+                  <TouchableOpacity onPress={handleRemoveTime}>
                     <Ionicons name="close-circle" size={20} color="#CBD5E1" />
                   </TouchableOpacity>
                 </View>
@@ -506,11 +449,18 @@ export default function AddTransactionScreen() {
                     setShowTimePicker(true);
                     setField('hasTime', true);
                   }}
-                  className="flex-row items-center px-4 gap-3"
-                  style={{ paddingVertical: 13 }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    gap: 12,
+                  }}
                 >
                   <Ionicons name="time-outline" size={18} color="#CBD5E1" />
-                  <Text className="flex-1 text-slate-300 text-sm">Add time (optional)</Text>
+                  <Text style={{ flex: 1, color: '#94A3B8', fontSize: 14 }}>
+                    Add time (optional)
+                  </Text>
                   <Ionicons name="add-circle-outline" size={18} color="#CBD5E1" />
                 </TouchableOpacity>
               )}
@@ -519,92 +469,21 @@ export default function AddTransactionScreen() {
 
           {/* Notes */}
           <View>
-            <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
-              Notes{' '}
-              <Text
-                className="text-textSecondary font-normal normal-case"
-                style={{ letterSpacing: 0 }}
-              >
-                (optional)
-              </Text>
-            </Text>
-            <View
-              className="bg-card rounded-2xl"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 1,
-              }}
-            >
-              <TextInput
-                value={form.notes}
-                onChangeText={v => setField('notes', v)}
-                placeholder="Add any extra notes…"
-                placeholderTextColor="#CBD5E1"
-                multiline
-                numberOfLines={3}
-                className="text-textPrimary text-base px-4"
-                style={{ paddingVertical: 13, minHeight: 70 }}
-              />
-            </View>
+            <Text style={labelStyle}>Notes (optional)</Text>
+            <TextInput
+              value={form.notes}
+              onChangeText={v => setField('notes', v)}
+              placeholder="Add any extra notes…"
+              placeholderTextColor="#CBD5E1"
+              multiline
+              numberOfLines={3}
+              style={[inputStyle, { minHeight: 70 }]}
+            />
           </View>
 
-          {/* Attachment */}
-          <View>
-            <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
-              Attachment{' '}
-              <Text
-                className="text-textSecondary font-normal normal-case"
-                style={{ letterSpacing: 0 }}
-              >
-                (optional)
-              </Text>
-            </Text>
-            {form.attachmentUri ? (
-              <View>
-                <Image
-                  source={{ uri: form.attachmentUri }}
-                  className="w-full rounded-2xl"
-                  style={{ height: 180 }}
-                  resizeMode="cover"
-                />
-                <View className="flex-row gap-2 mt-2">
-                  <TouchableOpacity
-                    onPress={handleAttachmentPress}
-                    className="flex-1 flex-row items-center justify-center gap-1.5 bg-filterBar rounded-xl py-3"
-                  >
-                    <Ionicons name="camera-outline" size={16} color="#14B8A6" />
-                    <Text className="text-primary font-semibold text-sm">Change</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setField('attachmentUri', null)}
-                    className="flex-1 flex-row items-center justify-center gap-1.5 bg-expense/10 rounded-xl py-3"
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                    <Text className="text-expense font-semibold text-sm">Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity
-                onPress={handleAttachmentPress}
-                activeOpacity={0.7}
-                className="bg-card rounded-2xl border border-border items-center py-5 gap-1.5"
-              >
-                <View className="w-11 h-11 rounded-full bg-filterBar items-center justify-center">
-                  <Ionicons name="attach-outline" size={22} color="#14B8A6" />
-                </View>
-                <Text className="text-textPrimary text-sm font-medium mt-1">Add Attachment</Text>
-                <Text className="text-textSecondary text-xs">Receipt, photo, document…</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Missing field chips */}
+          {/* Validation chips */}
           {!isValid && (
-            <View className="flex-row flex-wrap gap-1.5">
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               {(!form.amount || parseFloat(form.amount) <= 0) && <MissingChip label="Amount" />}
               {!form.title.trim() && <MissingChip label="Description" />}
               {form.type !== 'transfer' && !form.selectedCategory && (
@@ -618,15 +497,22 @@ export default function AddTransactionScreen() {
             onPress={handleSave}
             disabled={!isValid || isSaving}
             activeOpacity={0.8}
-            className="rounded-2xl py-4 items-center justify-center flex-row gap-2"
-            style={{ backgroundColor: isValid && !isSaving ? config.color : '#E2E8F0' }}
+            style={{
+              borderRadius: 12,
+              paddingVertical: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'row',
+              gap: 8,
+              backgroundColor: isValid && !isSaving ? config.color : '#E2E8F0',
+              opacity: isValid && !isSaving ? 1 : 0.5,
+            }}
           >
             {isSaving ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text
-                className={`font-bold text-base ${isValid ? 'text-white' : 'text-textSecondary'}`}
-                style={{ letterSpacing: 0.2 }}
+                style={{ fontWeight: '700', fontSize: 16, color: isValid ? '#FFF' : '#94A3B8' }}
               >
                 {form.type === 'transfer' ? 'Save Transfer' : 'Save Transaction'}
               </Text>
@@ -638,9 +524,20 @@ export default function AddTransactionScreen() {
       {/* Date picker */}
       {Platform.OS === 'ios' ? (
         <Modal visible={showDatePicker} transparent animationType="slide">
-          <Pressable className="flex-1 bg-black/40" onPress={() => setShowDatePicker(false)}>
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onPress={() => setShowDatePicker(false)}
+          >
             <Pressable
-              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl"
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: '#FFF',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+              }}
               onPress={e => e.stopPropagation()}
             >
               <PickerHeader
@@ -651,18 +548,16 @@ export default function AddTransactionScreen() {
                   setShowDatePicker(false);
                 }}
               />
-              <View className="bg-card">
-                <DateTimePicker
-                  value={tempDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={(_, d) => {
-                    if (d) setTempDate(d);
-                  }}
-                  textColor="#0F172A"
-                  style={{ backgroundColor: '#fff', height: 200 }}
-                />
-              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="spinner"
+                onChange={(_, d) => {
+                  if (d) setTempDate(d);
+                }}
+                textColor="#0F172A"
+                style={{ backgroundColor: '#fff', height: 200 }}
+              />
               <View style={{ height: insets.bottom + 16 }} />
             </Pressable>
           </Pressable>
@@ -685,14 +580,22 @@ export default function AddTransactionScreen() {
       {Platform.OS === 'ios' ? (
         <Modal visible={showTimePicker} transparent animationType="slide">
           <Pressable
-            className="flex-1 bg-black/40"
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' }}
             onPress={() => {
               setShowTimePicker(false);
               setField('hasTime', false);
             }}
           >
             <Pressable
-              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl"
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: '#FFF',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+              }}
               onPress={e => e.stopPropagation()}
             >
               <PickerHeader
@@ -707,18 +610,16 @@ export default function AddTransactionScreen() {
                   setShowTimePicker(false);
                 }}
               />
-              <View className="bg-card">
-                <DateTimePicker
-                  value={tempDate}
-                  mode="time"
-                  display="spinner"
-                  onChange={(_, d) => {
-                    if (d) setTempDate(d);
-                  }}
-                  textColor="#0F172A"
-                  style={{ backgroundColor: '#fff', height: 200 }}
-                />
-              </View>
+              <DateTimePicker
+                value={tempDate}
+                mode="time"
+                display="spinner"
+                onChange={(_, d) => {
+                  if (d) setTempDate(d);
+                }}
+                textColor="#0F172A"
+                style={{ backgroundColor: '#fff', height: 200 }}
+              />
               <View style={{ height: insets.bottom + 16 }} />
             </Pressable>
           </Pressable>
@@ -742,62 +643,93 @@ export default function AddTransactionScreen() {
 
       {/* Success modal */}
       <Modal visible={showSuccessModal} transparent animationType="fade">
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
+        <View
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15,23,42,0.55)' }}
+        >
           <Animated.View
-            className="bg-card rounded-t-3xl px-6 pt-8"
             style={{
+              backgroundColor: '#FFF',
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingHorizontal: 24,
+              paddingTop: 32,
               paddingBottom: insets.bottom + 24,
               transform: [{ scale: successScale }],
               opacity: successOpacity,
             }}
           >
-            <View className="items-center mb-6">
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
               <View
-                className="w-20 h-20 rounded-full items-center justify-center mb-4"
-                style={{ backgroundColor: snapshotConfig.bg }}
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 16,
+                  backgroundColor: snapshotConfig.bg,
+                }}
               >
                 <Text style={{ fontSize: 38 }}>
                   {snapshot?.type === 'expense' ? '💸' : snapshot?.type === 'income' ? '💰' : '🔄'}
                 </Text>
               </View>
-              <Text
-                className="text-textPrimary text-xl font-extrabold"
-                style={{ letterSpacing: -0.4 }}
-              >
+              <Text style={{ color: '#0F172A', fontSize: 20, fontWeight: '800', marginBottom: 4 }}>
                 Saved!
               </Text>
-              <Text className="text-textSecondary text-sm mt-1">
+              <Text style={{ color: '#64748B', fontSize: 14 }}>
                 {snapshotConfig.label} recorded successfully
               </Text>
             </View>
             <View
-              className="rounded-2xl items-center py-5 mb-7"
-              style={{ backgroundColor: snapshotConfig.bg }}
+              style={{
+                borderRadius: 16,
+                alignItems: 'center',
+                paddingVertical: 20,
+                marginBottom: 28,
+                backgroundColor: snapshotConfig.bg,
+              }}
             >
               <Text
-                className="font-extrabold"
-                style={{ fontSize: 40, color: snapshotConfig.color, letterSpacing: -1 }}
+                style={{
+                  fontSize: 40,
+                  color: snapshotConfig.color,
+                  fontWeight: '800',
+                  letterSpacing: -1,
+                }}
               >
                 {snapshotConfig.symbol}
                 {currency.symbol}
                 {parseFloat(snapshot?.amount || '0').toFixed(2)}
               </Text>
-              <Text className="text-textSecondary text-base mt-1.5" numberOfLines={1}>
+              <Text style={{ color: '#64748B', fontSize: 16, marginTop: 12 }} numberOfLines={1}>
                 {snapshot?.title}
               </Text>
             </View>
-            <View className="gap-2.5">
+            <View style={{ gap: 10 }}>
               <TouchableOpacity
                 onPress={handleAddAnother}
-                className="bg-background rounded-2xl py-4 items-center"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                }}
               >
-                <Text className="text-textPrimary font-semibold text-base">+ Add Another</Text>
+                <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 16 }}>
+                  + Add Another
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleDone}
-                className="bg-primary rounded-2xl py-4 items-center"
+                style={{
+                  backgroundColor: '#14B8A6',
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                }}
               >
-                <Text className="text-white font-bold text-base">Done</Text>
+                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 16 }}>Done</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -809,9 +741,19 @@ export default function AddTransactionScreen() {
 
 function MissingChip({ label }: { label: string }) {
   return (
-    <View className="flex-row items-center gap-1 bg-expense/10 rounded-full px-2.5 py-1">
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(239,68,68,0.1)',
+        borderRadius: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+      }}
+    >
       <Ionicons name="alert-circle" size={12} color="#EF4444" />
-      <Text className="text-expense text-xs font-medium">{label}</Text>
+      <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '500' }}>{label}</Text>
     </View>
   );
 }
@@ -826,14 +768,43 @@ function PickerHeader({
   onDone: () => void;
 }) {
   return (
-    <View className="flex-row justify-between items-center px-6 py-4 border-b border-border">
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E2E8F0',
+      }}
+    >
       <TouchableOpacity onPress={onCancel}>
-        <Text className="text-textSecondary text-lg">Cancel</Text>
+        <Text style={{ color: '#64748B', fontSize: 16 }}>Cancel</Text>
       </TouchableOpacity>
-      <Text className="text-textPrimary text-base font-bold">{title}</Text>
+      <Text style={{ color: '#0F172A', fontSize: 16, fontWeight: '700' }}>{title}</Text>
       <TouchableOpacity onPress={onDone}>
-        <Text className="text-primary text-lg font-bold">Done</Text>
+        <Text style={{ color: '#14B8A6', fontSize: 16, fontWeight: '700' }}>Done</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+const labelStyle = {
+  color: '#64748B',
+  fontSize: 12,
+  fontWeight: '600' as const,
+  marginBottom: 8,
+  textTransform: 'uppercase' as const,
+  letterSpacing: 0.5,
+};
+const inputStyle = {
+  backgroundColor: '#FFF',
+  borderRadius: 12,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  fontSize: 16,
+  color: '#0F172A',
+  borderWidth: 1,
+  borderColor: '#E2E8F0',
+};

@@ -29,15 +29,13 @@ export default function DashboardScreen() {
 
   // ── All-time wallet balance (non-credit) ─────────────────────────────────
   const getWalletBalance = (walletId: string) => {
-    const wallet = wallets.find(w => w.id === walletId);
-    if (!wallet) return 0;
     return transactions.reduce((sum, t) => {
       if (t.type === 'transfer') {
-        if (t.wallet === wallet.name) return sum - t.amount;
+        if (t.walletId === walletId) return sum - t.amount;
         if (t.toWalletId === walletId) return sum + t.amount;
         return sum;
       }
-      if (t.wallet === wallet.name) return sum + t.amount;
+      if (t.walletId === walletId) return sum + t.amount;
       return sum;
     }, 0);
   };

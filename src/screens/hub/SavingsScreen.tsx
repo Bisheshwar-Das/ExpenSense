@@ -1,127 +1,106 @@
-// screens/SavingsScreen.tsx
+// src/screens/hub/SavingsScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useGoals } from '../../contexts/GoalContext';
-import { useTransactions } from '../../contexts/TransactionContext';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSavings } from '../../contexts/SavingsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { Goal } from '../../types';
-import GoalModal from '@/components/GoalModal';
-import { useNavigation } from '@react-navigation/native';
-import AppHeader from '@/components/AppHeader';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import SavingsGoalModal from '../../components/SavingsModal';
+import AppHeader from '../../components/AppHeader';
 
 type SavingsSort = 'urgency' | 'progress' | 'amount';
 
 export default function SavingsScreen() {
   const navigation = useNavigation<any>();
-  const { goals, deleteGoal } = useGoals();
-  const { transactions } = useTransactions();
+  const { savingsGoals, deleteSavingsGoal, getSavingsProgress } = useSavings();
   const { currency } = useSettings();
-  const insets = useSafeAreaInsets();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [sortBy, setSortBy] = useState<SavingsSort>('urgency');
   const [sortAsc, setSortAsc] = useState(false);
 
-  const savingsGoals = goals.filter(g => g.type === 'savings');
+  const handleAdd = () => {
+    setEditingGoal(null);
+    setModalVisible(true);
+  };
+  const handleEdit = (g: Goal) => {
+    setEditingGoal(g);
+    setModalVisible(true);
+  };
+  const handleDelete = (g: Goal) => {
+    Alert.alert('Delete Goal', `Delete "${g.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteSavingsGoal(g.id) },
+    ]);
+  };
 
-  const getSavingsProgress = (goalId: string) =>
-    transactions
-      .filter(t => t.type === 'transfer' && t.toGoalId === goalId)
-      .reduce((sum, t) => sum + t.amount, 0);
-
-  const getSavingsRecommendation = (goal: Goal) => {
-    if (!goal.deadline || goal.type !== 'savings') return null;
+  const getRecommendation = (goal: Goal) => {
+    if (!goal.deadline) return null;
     const now = new Date();
-    const deadline = new Date(goal.deadline);
-    const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    const weeksLeft = Math.ceil(daysLeft / 7);
-    const currentAmount = getSavingsProgress(goal.id);
-    const remaining = goal.targetAmount - currentAmount;
+    const daysLeft = Math.ceil(
+      (new Date(goal.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const { saved } = getSavingsProgress(goal.id);
+    const remaining = goal.targetAmount - saved;
     if (daysLeft <= 0 || remaining <= 0) return null;
+    const weeksLeft = Math.ceil(daysLeft / 7);
     const weeklyTarget = remaining / Math.max(weeksLeft, 1);
     return {
       weeklyTarget,
       monthlyTarget: weeklyTarget * 4.33,
-      daysRemaining: daysLeft,
-      weeksRemaining: weeksLeft,
+      daysLeft,
+      weeksLeft,
       isUrgent: daysLeft < 30,
       isVeryUrgent: daysLeft < 14,
     };
   };
 
-  const getUrgencyConfig = (rec: NonNullable<ReturnType<typeof getSavingsRecommendation>>) => {
+  const urgencyConfig = (rec: NonNullable<ReturnType<typeof getRecommendation>>) => {
     if (rec.isVeryUrgent)
       return {
         color: '#EF4444',
-        bg: 'bg-expense/5',
+        bgColor: 'rgba(239,68,68,0.05)',
         label: '🔴 Urgent',
-        textColor: 'text-expense',
+        textColor: '#EF4444',
       };
     if (rec.isUrgent)
       return {
         color: '#F59E0B',
-        bg: 'bg-amber-500/5',
+        bgColor: 'rgba(245,158,11,0.05)',
         label: '🟡 On track',
-        textColor: 'text-amber-600',
+        textColor: '#D97706',
       };
     return {
-      color: '#10B981',
-      bg: 'bg-income/5',
+      color: '#22C55E',
+      bgColor: 'rgba(34,197,94,0.05)',
       label: '🟢 Plenty of time',
-      textColor: 'text-income',
+      textColor: '#16A34A',
     };
   };
 
-  const getTotalSavingsNeeded = () => {
-    const activeGoals = savingsGoals.filter(g => {
-      const current = getSavingsProgress(g.id);
-      return g.targetAmount - current > 0 && g.deadline;
-    });
-    const totalWeekly = activeGoals.reduce(
-      (sum, g) => sum + (getSavingsRecommendation(g)?.weeklyTarget || 0),
-      0
-    );
-    const totalSaved = savingsGoals.reduce((sum, g) => sum + getSavingsProgress(g.id), 0);
-    const totalTarget = savingsGoals.reduce((sum, g) => sum + g.targetAmount, 0);
-    const totalRemaining = activeGoals.reduce(
-      (sum, g) => sum + (g.targetAmount - getSavingsProgress(g.id)),
-      0
-    );
-    return {
-      weeklyTarget: totalWeekly,
-      monthlyTarget: totalWeekly * 4.33,
-      totalRemaining,
-      totalSaved,
-      totalTarget,
-      goalCount: activeGoals.length,
-    };
-  };
+  // Summary
+  const totalTarget = savingsGoals.reduce((sum, g) => sum + g.targetAmount, 0);
+  const totalSaved = savingsGoals.reduce((sum, g) => sum + getSavingsProgress(g.id).saved, 0);
+  const activeGoals = savingsGoals.filter(g => {
+    const { saved } = getSavingsProgress(g.id);
+    return g.targetAmount - saved > 0 && g.deadline;
+  });
+  const totalWeekly = activeGoals.reduce(
+    (sum, g) => sum + (getRecommendation(g)?.weeklyTarget ?? 0),
+    0
+  );
+  const totalRemaining = activeGoals.reduce(
+    (sum, g) => sum + (g.targetAmount - getSavingsProgress(g.id).saved),
+    0
+  );
 
-  const handleAddGoal = () => {
-    setEditingGoal(null);
-    setModalVisible(true);
-  };
-  const handleEditGoal = (goal: Goal) => {
-    setEditingGoal(goal);
-    setModalVisible(true);
-  };
-  const handleDeleteGoal = (goal: Goal) => {
-    Alert.alert('Delete Goal', `Delete "${goal.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteGoal(goal.id) },
-    ]);
-  };
-
-  const summary = getTotalSavingsNeeded();
-
-  const sortedGoals = [...savingsGoals].sort((a, b) => {
-    const aProgress = getSavingsProgress(a.id);
-    const bProgress = getSavingsProgress(b.id);
-    const aComplete = aProgress >= a.targetAmount;
-    const bComplete = bProgress >= b.targetAmount;
+  const sorted = [...savingsGoals].sort((a, b) => {
+    const aP = getSavingsProgress(a.id);
+    const bP = getSavingsProgress(b.id);
+    const aComplete = aP.saved >= a.targetAmount;
+    const bComplete = bP.saved >= b.targetAmount;
     if (aComplete && !bComplete) return 1;
     if (!aComplete && bComplete) return -1;
     let result = 0;
@@ -131,8 +110,8 @@ export default function SavingsScreen() {
       else if (!b.deadline) result = -1;
       else result = new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
     } else if (sortBy === 'progress') {
-      result = aProgress / a.targetAmount - bProgress / b.targetAmount;
-    } else if (sortBy === 'amount') {
+      result = aP.saved / a.targetAmount - bP.saved / b.targetAmount;
+    } else {
       result = a.targetAmount - b.targetAmount;
     }
     return sortAsc ? result : -result;
@@ -140,23 +119,27 @@ export default function SavingsScreen() {
 
   return (
     <>
-      <ScrollView className="flex-1 bg-background">
+      <ScrollView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
         <AppHeader
           title="Savings Goals"
           subtitle={`${savingsGoals.length} ${savingsGoals.length === 1 ? 'goal' : 'goals'}`}
           onBack={() => navigation.goBack()}
-          onEdit={handleAddGoal}
+          onEdit={handleAdd}
           editLabel="+ Add"
           hideMenu
           backgroundColor="#22C55E"
         />
 
-        <View className="px-4 pb-8">
+        <View style={{ paddingHorizontal: 16, paddingBottom: 32 }}>
           {/* Summary card */}
           {savingsGoals.length > 0 && (
             <View
-              className="bg-card rounded-2xl mt-4 mb-4 overflow-hidden"
               style={{
+                backgroundColor: '#FFF',
+                borderRadius: 16,
+                marginTop: 16,
+                marginBottom: 16,
+                overflow: 'hidden',
                 shadowColor: '#22C55E',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.12,
@@ -164,127 +147,195 @@ export default function SavingsScreen() {
                 elevation: 3,
               }}
             >
-              <View className="px-4 pt-4 pb-3">
-                <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-3">
+              <View style={{ padding: 16 }}>
+                <Text
+                  style={{
+                    color: '#64748B',
+                    fontSize: 11,
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.8,
+                    marginBottom: 12,
+                  }}
+                >
                   Overall Progress
                 </Text>
-                <View className="flex-row justify-between mb-3">
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginBottom: 12,
+                  }}
+                >
                   <View>
-                    <Text className="text-textSecondary text-xs mb-0.5">Target</Text>
-                    <Text className="text-textPrimary font-bold text-base">
+                    <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>Target</Text>
+                    <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 16 }}>
                       {currency.symbol}
-                      {summary.totalTarget.toFixed(0)}
+                      {totalTarget.toFixed(0)}
                     </Text>
                   </View>
-                  <View className="items-center">
-                    <Text className="text-textSecondary text-xs mb-0.5">Saved</Text>
-                    <Text className="text-income font-bold text-base">
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>Saved</Text>
+                    <Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 16 }}>
                       {currency.symbol}
-                      {summary.totalSaved.toFixed(0)}
+                      {totalSaved.toFixed(0)}
                     </Text>
                   </View>
-                  <View className="items-end">
-                    <Text className="text-textSecondary text-xs mb-0.5">Remaining</Text>
-                    <Text className="text-expense font-bold text-base">
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>
+                      Remaining
+                    </Text>
+                    <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 16 }}>
                       {currency.symbol}
-                      {summary.totalRemaining.toFixed(0)}
+                      {totalRemaining.toFixed(0)}
                     </Text>
                   </View>
                 </View>
-                {/* Overall progress bar */}
-                <View className="h-2 bg-border rounded-full overflow-hidden">
+                <View
+                  style={{
+                    height: 8,
+                    backgroundColor: '#E2E8F0',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                  }}
+                >
                   <View
-                    className="h-full rounded-full bg-income"
                     style={{
-                      width: `${Math.min((summary.totalSaved / Math.max(summary.totalTarget, 1)) * 100, 100)}%`,
+                      height: '100%',
+                      borderRadius: 4,
+                      backgroundColor: '#22C55E',
+                      width: `${Math.min((totalSaved / Math.max(totalTarget, 1)) * 100, 100)}%`,
                     }}
                   />
                 </View>
               </View>
-              {summary.goalCount > 0 && (
-                <View className="border-t border-border px-4 py-3 flex-row justify-between items-center">
-                  <Text className="text-textSecondary text-xs">💡 Recommended to save</Text>
-                  <Text className="text-income font-bold text-sm">
+              {activeGoals.length > 0 && (
+                <View
+                  style={{
+                    borderTopWidth: 1,
+                    borderTopColor: '#E2E8F0',
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#64748B', fontSize: 12 }}>💡 Recommended to save</Text>
+                  <Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>
                     {currency.symbol}
-                    {summary.weeklyTarget.toFixed(0)}/week
+                    {totalWeekly.toFixed(0)}/week
                   </Text>
                 </View>
               )}
             </View>
           )}
 
-          {/* Sort controls */}
+          {/* Sort bar */}
           {savingsGoals.length > 0 && (
-            <View className="flex-row items-center gap-2 mb-3">
-              <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider flex-1">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Text
+                style={{
+                  color: '#94A3B8',
+                  fontSize: 11,
+                  fontWeight: '700',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                  flex: 1,
+                }}
+              >
                 Goals
               </Text>
-              {(
-                [
-                  { key: 'urgency', label: 'Urgency' },
-                  { key: 'progress', label: 'Progress' },
-                  { key: 'amount', label: 'Amount' },
-                ] as { key: SavingsSort; label: string }[]
-              ).map(opt => (
+              {(['urgency', 'progress', 'amount'] as SavingsSort[]).map(opt => (
                 <TouchableOpacity
-                  key={opt.key}
-                  onPress={() => setSortBy(opt.key)}
-                  className={`px-2.5 py-1 rounded-full ${sortBy === opt.key ? 'bg-income' : 'bg-border'}`}
+                  key={opt}
+                  onPress={() => setSortBy(opt)}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 20,
+                    backgroundColor: sortBy === opt ? '#22C55E' : '#E2E8F0',
+                  }}
                 >
                   <Text
-                    className={`text-xs font-medium ${sortBy === opt.key ? 'text-white' : 'text-textSecondary'}`}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '600',
+                      color: sortBy === opt ? '#FFF' : '#64748B',
+                      textTransform: 'capitalize',
+                    }}
                   >
-                    {opt.label}
+                    {opt}
                   </Text>
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
                 onPress={() => setSortAsc(v => !v)}
-                className="w-7 h-7 rounded-full bg-border items-center justify-center"
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: '#E2E8F0',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <Ionicons name={sortAsc ? 'arrow-up' : 'arrow-down'} size={13} color="#64748B" />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Goals list */}
+          {/* Empty state */}
           {savingsGoals.length === 0 ? (
             <View
-              className="bg-card rounded-2xl p-8 items-center mt-4"
               style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 1,
+                backgroundColor: '#FFF',
+                borderRadius: 16,
+                padding: 32,
+                alignItems: 'center',
+                marginTop: 16,
               }}
             >
               <Text style={{ fontSize: 36, marginBottom: 12 }}>💰</Text>
-              <Text className="text-textPrimary font-semibold text-base mb-1">
+              <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 16, marginBottom: 4 }}>
                 No savings goals yet
               </Text>
-              <Text className="text-textSecondary text-sm text-center mb-4">
+              <Text
+                style={{ color: '#64748B', fontSize: 14, textAlign: 'center', marginBottom: 16 }}
+              >
                 Set a target and track your progress
               </Text>
-              <TouchableOpacity onPress={handleAddGoal} className="bg-income rounded-2xl px-6 py-3">
-                <Text className="text-white font-semibold">Create First Goal</Text>
+              <TouchableOpacity
+                onPress={handleAdd}
+                style={{
+                  backgroundColor: '#22C55E',
+                  borderRadius: 12,
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                }}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>Create First Goal</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            sortedGoals.map(goal => {
-              const currentAmount = getSavingsProgress(goal.id);
-              const progress = (currentAmount / goal.targetAmount) * 100;
-              const remaining = goal.targetAmount - currentAmount;
-              const recommendation = getSavingsRecommendation(goal);
-              const urgency = recommendation ? getUrgencyConfig(recommendation) : null;
+            sorted.map(goal => {
+              const { saved } = getSavingsProgress(goal.id);
+              const progress = (saved / goal.targetAmount) * 100;
+              const remaining = goal.targetAmount - saved;
+              const rec = getRecommendation(goal);
+              const urgency = rec ? urgencyConfig(rec) : null;
+              const isComplete = progress >= 100;
 
               return (
                 <TouchableOpacity
                   key={goal.id}
-                  onPress={() => handleEditGoal(goal)}
-                  onLongPress={() => handleDeleteGoal(goal)}
-                  className="bg-card rounded-2xl mb-3 overflow-hidden"
+                  onPress={() => handleEdit(goal)}
+                  onLongPress={() => handleDelete(goal)}
                   style={{
+                    backgroundColor: '#FFF',
+                    borderRadius: 16,
+                    marginBottom: 12,
+                    overflow: 'hidden',
                     shadowColor: goal.color,
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.12,
@@ -292,79 +343,115 @@ export default function SavingsScreen() {
                     elevation: 2,
                   }}
                 >
-                  <View className="p-4">
-                    <View className="flex-row items-center justify-between mb-3">
-                      <View className="flex-row items-center flex-1">
-                        <View
-                          className="w-11 h-11 rounded-xl items-center justify-center mr-3"
-                          style={{ backgroundColor: goal.color + '20' }}
-                        >
-                          <Text style={{ fontSize: 22 }}>{goal.icon}</Text>
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-textPrimary font-semibold text-base">
-                            {goal.name}
-                          </Text>
-                          {goal.deadline && (
-                            <Text className="text-textSecondary text-xs">
-                              Due{' '}
-                              {new Date(goal.deadline).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                            </Text>
-                          )}
-                        </View>
+                  <View style={{ padding: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                          backgroundColor: goal.color + '20',
+                        }}
+                      >
+                        <Text style={{ fontSize: 22 }}>{goal.icon}</Text>
                       </View>
-                      {urgency && (
-                        <Text className="text-xs font-semibold ml-2">{urgency.label}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 16 }}>
+                          {goal.name}
+                        </Text>
+                        {goal.deadline && (
+                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                            Due{' '}
+                            {new Date(goal.deadline).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </Text>
+                        )}
+                      </View>
+                      {urgency && !isComplete && (
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '600',
+                            marginLeft: 8,
+                            color: urgency.textColor,
+                          }}
+                        >
+                          {urgency.label}
+                        </Text>
                       )}
                     </View>
 
-                    <View className="h-2 bg-border rounded-full overflow-hidden mb-3">
+                    <View
+                      style={{
+                        height: 8,
+                        backgroundColor: '#E2E8F0',
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                        marginBottom: 12,
+                      }}
+                    >
                       <View
-                        className="h-full rounded-full"
                         style={{
+                          height: '100%',
+                          borderRadius: 4,
                           width: `${Math.min(progress, 100)}%`,
                           backgroundColor: goal.color,
                         }}
                       />
                     </View>
 
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-textSecondary text-sm">
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: '#64748B', fontSize: 13 }}>
                         {currency.symbol}
-                        {currentAmount.toFixed(0)} / {currency.symbol}
+                        {saved.toFixed(0)} / {currency.symbol}
                         {goal.targetAmount.toFixed(0)}
                       </Text>
-                      <Text className="text-textSecondary text-sm font-semibold">
-                        {progress.toFixed(0)}%
+                      <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>
+                        {Math.min(progress, 100).toFixed(0)}%
                       </Text>
                     </View>
                   </View>
 
-                  {recommendation && urgency && (
+                  {rec && urgency && !isComplete && (
                     <View
-                      className={`${urgency.bg} border-t border-border px-4 py-3 flex-row justify-between items-center`}
+                      style={{
+                        borderTopWidth: 1,
+                        borderTopColor: '#E2E8F0',
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: urgency.bgColor,
+                      }}
                     >
                       <View>
-                        <Text className="text-textSecondary text-xs mb-0.5">Save per week</Text>
-                        <Text className={`font-bold text-lg ${urgency.textColor}`}>
-                          {currency.symbol}
-                          {recommendation.weeklyTarget.toFixed(0)}
+                        <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>
+                          Save per week
                         </Text>
-                        <Text className="text-textSecondary text-xs">
+                        <Text style={{ color: urgency.textColor, fontWeight: '700', fontSize: 18 }}>
+                          {currency.symbol}
+                          {rec.weeklyTarget.toFixed(0)}
+                        </Text>
+                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>
                           or {currency.symbol}
-                          {recommendation.monthlyTarget.toFixed(0)}/mo
+                          {rec.monthlyTarget.toFixed(0)}/mo
                         </Text>
                       </View>
-                      <View className="items-end">
-                        <Text className="text-textSecondary text-xs mb-0.5">Time left</Text>
-                        <Text className="text-textPrimary font-semibold text-base">
-                          {recommendation.weeksRemaining}w
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 2 }}>
+                          Time left
                         </Text>
-                        <Text className="text-textSecondary text-xs">
+                        <Text style={{ color: '#0F172A', fontWeight: '600', fontSize: 16 }}>
+                          {rec.weeksLeft}w
+                        </Text>
+                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>
                           {currency.symbol}
                           {remaining.toFixed(0)} to go
                         </Text>
@@ -372,9 +459,17 @@ export default function SavingsScreen() {
                     </View>
                   )}
 
-                  {progress >= 100 && (
-                    <View className="bg-income/10 border-t border-border px-4 py-3">
-                      <Text className="text-income font-semibold text-center">
+                  {isComplete && (
+                    <View
+                      style={{
+                        borderTopWidth: 1,
+                        borderTopColor: '#E2E8F0',
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
+                        backgroundColor: 'rgba(34,197,94,0.05)',
+                      }}
+                    >
+                      <Text style={{ color: '#22C55E', fontWeight: '600', textAlign: 'center' }}>
                         🎉 Goal reached!
                       </Text>
                     </View>
@@ -386,11 +481,10 @@ export default function SavingsScreen() {
         </View>
       </ScrollView>
 
-      <GoalModal
+      <SavingsGoalModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         editGoal={editingGoal}
-        defaultType="savings"
       />
     </>
   );

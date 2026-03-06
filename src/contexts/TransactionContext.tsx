@@ -1,14 +1,27 @@
+// src/contexts/TransactionContext.tsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Transaction } from '../types';
+import { Transaction, NewTransaction, TRANSFER_CATEGORY_ID } from '../types';
+
+const STORAGE_KEY = '@expensense_transactions_v2';
 
 interface TransactionContextType {
   transactions: Transaction[];
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
-  deleteTransaction: (id: string) => Promise<void>;
-  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
-  clearAllTransactions: () => Promise<void>;
   isLoading: boolean;
+  addTransaction: (data: NewTransaction) => Promise<Transaction>;
+  updateTransaction: (id: string, updates: Partial<NewTransaction>) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  clearAllTransactions: () => Promise<void>;
+  // Helpers
+  getTransactionById: (id: string) => Transaction | undefined;
+  getTransactionsByWallet: (walletId: string) => Transaction[];
+  getTransactionsByCategory: (categoryId: string) => Transaction[];
+  getTransactionsByGoal: (goalId: string) => Transaction[];
+  getTransactionsByDateRange: (startDate: string, endDate: string) => Transaction[];
+  getTransactionsByType: (type: 'income' | 'expense' | 'transfer') => Transaction[];
+  getTotalExpenses: () => number;
+  getTotalIncome: () => number;
+  getNetAmount: () => number;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -17,104 +30,126 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  //Key for AsyncStorage - like a filename
-  const STORAGE_KEY = '@expensense_transactions';
-
-  // LOAD transactions from AsyncStorage when app starts
   useEffect(() => {
     loadTransactions();
-  }, []); // Empty array = run once when component mounts
+  }, []);
 
   const loadTransactions = async () => {
     try {
-      // Get the saved data from phone storage
-      const savedData = await AsyncStorage.getItem(STORAGE_KEY);
-
-      if (savedData) {
-        // Parse JSON string back into array
-        const parsed = JSON.parse(savedData);
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
         setTransactions(parsed);
         console.log('✅ Loaded transactions:', parsed.length);
       } else {
         console.log('📝 No saved transactions found');
       }
-    } catch (error) {
-      console.error('❌ Error loading transactions:', error);
+    } catch (err) {
+      console.error('❌ Error loading transactions:', err);
     } finally {
-      setIsLoading(false); // Done loading
+      setIsLoading(false);
     }
   };
 
-  // SAVE transactions to AsyncStorage
-  // Helper function - called after every change
-  const saveTransactions = async (newTransactions: Transaction[]) => {
+  const persist = async (updated: Transaction[]) => {
     try {
-      // Convert array to JSON string and save
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newTransactions));
-      console.log('💾 Saved transactions:', newTransactions.length);
-    } catch (error) {
-      console.error('❌ Error saving transactions:', error);
+      setTransactions(updated);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      console.log('💾 Saved transactions:', updated.length);
+    } catch (err) {
+      console.error('❌ Error saving transactions:', err);
+      throw err;
     }
   };
 
-  // ADD a new transaction
-  const addTransaction = async (transactionData: Omit<Transaction, 'id'>) => {
-    // Create new transaction with unique ID
+  const addTransaction = async (data: NewTransaction): Promise<Transaction> => {
     const newTransaction: Transaction = {
-      ...transactionData,
-      id: Date.now().toString(), // Simple ID using timestamp
+      ...data,
+      id: `txn_${Date.now()}`,
     };
-
-    // Update state (Context API - immediate UI update)
-    const updatedTransactions = [newTransaction, ...transactions];
-    setTransactions(updatedTransactions);
-
-    // Save to AsyncStorage (persists to disk)
-    await saveTransactions(updatedTransactions);
+    await persist([newTransaction, ...transactions]);
+    console.log('➕ Added transaction:', newTransaction.title);
+    return newTransaction;
   };
 
-  // DELETE a transaction
-  const deleteTransaction = async (id: string) => {
-    const updatedTransactions = transactions.filter(t => t.id !== id);
-    setTransactions(updatedTransactions);
-    await saveTransactions(updatedTransactions);
+  const updateTransaction = async (id: string, updates: Partial<NewTransaction>): Promise<void> => {
+    const updated = transactions.map(t => (t.id === id ? { ...t, ...updates } : t));
+    await persist(updated);
+    const txn = updated.find(t => t.id === id);
+    console.log('✏️ Updated transaction:', txn?.title);
   };
 
-  // UPDATE a transaction
-  const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
-    const updatedTransactions = transactions.map(t => (t.id === id ? { ...t, ...updates } : t));
-    setTransactions(updatedTransactions);
-    await saveTransactions(updatedTransactions);
+  const deleteTransaction = async (id: string): Promise<void> => {
+    const txn = transactions.find(t => t.id === id);
+    const filtered = transactions.filter(t => t.id !== id);
+    await persist(filtered);
+    console.log('🗑️ Deleted transaction:', txn?.title);
   };
 
-  // CLEAR ALL transactions
-  const clearAllTransactions = async () => {
-    setTransactions([]);
-    await saveTransactions([]);
+  const clearAllTransactions = async (): Promise<void> => {
+    await persist([]);
+    console.log('🗑️ Cleared all transactions');
   };
 
-  // PROVIDE all data/functions to children
-  const value = {
+  // ── Helper Methods ───────────────────────────────────────────────────────
+
+  const getTransactionById = (id: string): Transaction | undefined =>
+    transactions.find(t => t.id === id);
+
+  const getTransactionsByWallet = (walletId: string): Transaction[] =>
+    transactions.filter(t => t.walletId === walletId || t.toWalletId === walletId);
+
+  const getTransactionsByCategory = (categoryId: string): Transaction[] =>
+    transactions.filter(t => t.categoryId === categoryId);
+
+  const getTransactionsByGoal = (goalId: string): Transaction[] =>
+    transactions.filter(t => t.toGoalId === goalId);
+
+  const getTransactionsByDateRange = (startDate: string, endDate: string): Transaction[] => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return transactions.filter(t => {
+      const txnDate = new Date(t.date);
+      return txnDate >= start && txnDate <= end;
+    });
+  };
+
+  const getTransactionsByType = (type: 'income' | 'expense' | 'transfer'): Transaction[] =>
+    transactions.filter(t => t.type === type);
+
+  const getTotalExpenses = (): number =>
+    transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+  const getTotalIncome = (): number =>
+    transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+
+  const getNetAmount = (): number => getTotalIncome() - getTotalExpenses();
+
+  const value: TransactionContextType = {
     transactions,
-    addTransaction,
-    deleteTransaction,
-    updateTransaction,
-    clearAllTransactions,
     isLoading,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    clearAllTransactions,
+    getTransactionById,
+    getTransactionsByWallet,
+    getTransactionsByCategory,
+    getTransactionsByGoal,
+    getTransactionsByDateRange,
+    getTransactionsByType,
+    getTotalExpenses,
+    getTotalIncome,
+    getNetAmount,
   };
 
   return <TransactionContext.Provider value={value}>{children}</TransactionContext.Provider>;
 }
 
-//Custom Hook for easy access
-// This makes it easier to use the context in components
 export function useTransactions() {
-  const context = useContext(TransactionContext);
-
-  // Safety check - make sure we're inside the Provider
-  if (!context) {
+  const ctx = useContext(TransactionContext);
+  if (!ctx) {
     throw new Error('useTransactions must be used within TransactionProvider');
   }
-
-  return context;
+  return ctx;
 }

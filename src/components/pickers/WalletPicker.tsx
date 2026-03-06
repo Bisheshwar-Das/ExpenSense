@@ -1,4 +1,4 @@
-// components/WalletPicker.tsx
+// src/components/pickers/WalletPicker.tsx
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,13 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWallets } from '../../contexts/WalletContext';
 
 interface WalletPickerProps {
-  selectedWallet: string;
-  onSelectWallet: (walletName: string) => void;
+  selectedWalletId: string;
+  onSelectWallet: (walletId: string) => void;
   label?: string;
 }
 
 export default function WalletPicker({
-  selectedWallet,
+  selectedWalletId,
   onSelectWallet,
   label = 'Wallet',
 }: WalletPickerProps) {
@@ -20,44 +20,59 @@ export default function WalletPicker({
   const { wallets } = useWallets();
   const insets = useSafeAreaInsets();
 
-  const selectedWalletData = wallets.find(w => w.name === selectedWallet);
-
-  const handleSelect = (walletName: string) => {
-    onSelectWallet(walletName);
-    setModalVisible(false);
-  };
+  const selectedWalletData = wallets.find(w => w.id === selectedWalletId);
 
   return (
     <View>
-      <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
-        {label} <Text className="text-expense">*</Text>
+      <Text
+        style={{
+          color: '#64748B',
+          fontSize: 12,
+          fontWeight: '600',
+          marginBottom: 8,
+          textTransform: 'uppercase',
+          letterSpacing: 0.8,
+        }}
+      >
+        {label} <Text style={{ color: '#EF4444' }}>*</Text>
       </Text>
 
       <TouchableOpacity
         onPress={() => setModalVisible(true)}
         activeOpacity={0.7}
-        className="bg-card rounded-2xl px-4 flex-row items-center gap-3"
         style={{
+          backgroundColor: '#FFF',
+          borderRadius: 12,
+          paddingHorizontal: 16,
           paddingVertical: 13,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 12,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
         }}
       >
         <View
-          className="w-7 h-7 rounded-lg items-center justify-center"
           style={{
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            alignItems: 'center',
+            justifyContent: 'center',
             backgroundColor: selectedWalletData ? selectedWalletData.color + '20' : '#F8FAFC',
           }}
         >
-          <Text style={{ fontSize: 15 }}>{selectedWalletData?.icon || '👛'}</Text>
+          <Text style={{ fontSize: 15 }}>{selectedWalletData?.icon ?? '👛'}</Text>
         </View>
         <Text
-          className={`flex-1 text-base font-medium ${selectedWallet ? 'text-textPrimary' : 'text-slate-400'}`}
+          style={{
+            flex: 1,
+            fontSize: 16,
+            fontWeight: '500',
+            color: selectedWalletData ? '#0F172A' : '#94A3B8',
+          }}
         >
-          {selectedWallet || 'Select a wallet'}
+          {selectedWalletData?.name ?? 'Select a wallet'}
         </Text>
         <Ionicons name="chevron-down" size={16} color="#CBD5E1" />
       </TouchableOpacity>
@@ -68,40 +83,52 @@ export default function WalletPicker({
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable className="flex-1 bg-black/50" onPress={() => setModalVisible(false)}>
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onPress={() => setModalVisible(false)}
+        >
           <Pressable
-            className="absolute bottom-0 left-0 right-0 bg-background rounded-t-3xl"
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: '#F8FAFC',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+            }}
             onPress={e => e.stopPropagation()}
           >
-            {/* Handle */}
-            <View className="items-center pt-3 pb-1">
-              <View className="w-8 h-1 rounded-full bg-slate-300" />
+            <View style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 4 }}>
+              <View style={{ width: 32, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1' }} />
             </View>
-
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
-              <View>
-                <Text
-                  className="text-textPrimary text-lg font-bold"
-                  style={{ letterSpacing: -0.3 }}
-                >
-                  Select Wallet
-                </Text>
-                {selectedWallet && (
-                  <Text className="text-primary text-xs font-medium mt-0.5">
-                    {selectedWallet} selected
-                  </Text>
-                )}
-              </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 24,
+                paddingTop: 8,
+                paddingBottom: 16,
+              }}
+            >
+              <Text style={{ color: '#0F172A', fontSize: 18, fontWeight: '700' }}>
+                Select Wallet
+              </Text>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
-                className="w-8 h-8 rounded-full bg-slate-200 items-center justify-center"
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: '#E2E8F0',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <Ionicons name="close" size={16} color="#475569" />
               </TouchableOpacity>
             </View>
-
-            {/* List */}
             <ScrollView
               showsVerticalScrollIndicator={false}
               style={{ maxHeight: 380 }}
@@ -111,45 +138,67 @@ export default function WalletPicker({
                 gap: 4,
               }}
             >
-              {wallets.length === 0 ? (
-                <View className="items-center py-10">
-                  <Text style={{ fontSize: 36, marginBottom: 10 }}>👛</Text>
-                  <Text className="text-slate-600 text-base font-medium">No wallets yet</Text>
-                  <Text className="text-slate-400 text-sm mt-1 text-center">
-                    Go to the Wallets tab to create your first wallet
-                  </Text>
-                </View>
-              ) : (
-                wallets.map(wallet => {
-                  const isSelected = selectedWallet === wallet.name;
-                  return (
-                    <TouchableOpacity
-                      key={wallet.id}
-                      onPress={() => handleSelect(wallet.name)}
-                      activeOpacity={0.65}
-                      className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
-                      style={{ paddingVertical: 11, gap: 14 }}
+              {wallets.map(wallet => {
+                const isSelected = selectedWalletId === wallet.id;
+                return (
+                  <TouchableOpacity
+                    key={wallet.id}
+                    onPress={() => {
+                      onSelectWallet(wallet.id);
+                      setModalVisible(false);
+                    }}
+                    activeOpacity={0.65}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderRadius: 16,
+                      gap: 14,
+                      backgroundColor: isSelected ? '#CCFBF1' : '#FFF',
+                      borderWidth: isSelected ? 2 : 0,
+                      borderColor: '#5EEAD4',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 12,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isSelected ? '#99F6E4' : wallet.color + '20',
+                      }}
                     >
+                      <Text style={{ fontSize: 21 }}>{wallet.icon}</Text>
+                    </View>
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 16,
+                        color: isSelected ? '#0F766E' : '#0F172A',
+                        fontWeight: isSelected ? '600' : '400',
+                      }}
+                    >
+                      {wallet.name}
+                    </Text>
+                    {isSelected && (
                       <View
-                        className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : ''}`}
-                        style={{ backgroundColor: isSelected ? undefined : wallet.color + '20' }}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: '#14B8A6',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
                       >
-                        <Text style={{ fontSize: 21 }}>{wallet.icon}</Text>
+                        <Ionicons name="checkmark" size={13} color="#fff" />
                       </View>
-                      <Text
-                        className={`flex-1 text-base ${isSelected ? 'text-teal-700 font-semibold' : 'text-textPrimary'}`}
-                      >
-                        {wallet.name}
-                      </Text>
-                      {isSelected && (
-                        <View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
-                          <Ionicons name="checkmark" size={13} color="#fff" />
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })
-              )}
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </Pressable>
         </Pressable>

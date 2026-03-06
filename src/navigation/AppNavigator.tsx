@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 
 // Import screens
@@ -19,16 +18,17 @@ import HubScreen from '../screens/hub/HubScreen';
 import SavingsScreen from '../screens/hub/SavingsScreen';
 import BudgetsScreen from '../screens/hub/BudgetsScreen';
 import CategoriesScreen from '../screens/hub/CategoriesScreen';
-import AddEditCategoryScreen from '@/screens/hub/AddEditCategoryScreen';
+import AddEditCategoryScreen from '../screens/hub/AddEditCategoryScreen';
+import WalletDetailScreen from '../screens/wallets/WalletDetailScreen';
 
 // Import types
 import { RootStackParamList, TabParamList } from './types';
-import WalletDetailScreen from '@/screens/wallets/WalletDetailScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Main Tab Navigator (with bottom tabs)
+// ─── Tab Navigator with bottom tabs ───────────────────────────────────────────
+
 function TabNavigator() {
   return (
     <Tab.Navigator
@@ -69,7 +69,7 @@ function TabNavigator() {
         }}
       />
 
-      {/* Center Add Button */}
+      {/* Center Add Button (Floating) */}
       <Tab.Screen
         name="Add"
         component={AddTransactionScreen}
@@ -87,7 +87,7 @@ function TabNavigator() {
         }}
       />
 
-      {/* Reports Tab - Replaces Settings */}
+      {/* Reports Tab */}
       <Tab.Screen
         name="Reports"
         component={ReportsScreen}
@@ -98,6 +98,7 @@ function TabNavigator() {
         }}
       />
 
+      {/* Hub Tab */}
       <Tab.Screen
         name="Hub"
         component={HubScreen}
@@ -111,64 +112,107 @@ function TabNavigator() {
   );
 }
 
-// Root Stack Navigator (wraps tabs + modal screens)
+// ─── Root Stack Navigator (wraps tabs + modal screens) ──────────────────────
+
 export default function AppNavigator() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        <Stack.Navigator id="RootStack">
-          {/* Main app with tabs */}
-          <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
+    <NavigationContainer>
+      <Stack.Navigator
+        id="RootStack"
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        {/* Main app with bottom tabs */}
+        <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
 
-          {/* Modal/Detail screens (shown on top of tabs) */}
-          <Stack.Screen
-            name="Transactions"
-            component={TransactionsScreen}
-            options={{
-              headerShown: false,
-            }}
-          />
+        {/* Modal/Detail screens (displayed on top of tabs) */}
+        <Stack.Screen
+          name="Transactions"
+          component={TransactionsScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
 
-          <Stack.Screen
-            name="TransactionDetails"
-            component={TransactionDetailsScreen}
-            options={{
-              headerShown: false,
-            }}
-          />
+        <Stack.Screen
+          name="TransactionDetails"
+          component={TransactionDetailsScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
 
-          <Stack.Screen
-            name="EditTransaction"
-            component={EditTransactionScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Settings"
-            component={SettingsScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="WalletDetail"
-            component={WalletDetailScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen name="Savings" component={SavingsScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Budgets" component={BudgetsScreen} options={{ headerShown: false }} />
-          <Stack.Screen
-            name="AddEditCategory"
-            component={AddEditCategoryScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Categories"
-            component={CategoriesScreen}
-            options={{ headerShown: false }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </GestureHandlerRootView>
+        <Stack.Screen
+          name="EditTransaction"
+          component={EditTransactionScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+
+        <Stack.Screen
+          name="WalletDetail"
+          component={WalletDetailScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+
+        <Stack.Screen
+          name="Savings"
+          component={SavingsScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+
+        <Stack.Screen
+          name="Budgets"
+          component={BudgetsScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+
+        <Stack.Screen
+          name="Categories"
+          component={CategoriesScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+
+        <Stack.Screen
+          name="AddEditCategory"
+          component={AddEditCategoryScreen}
+          options={{
+            headerShown: false,
+            presentation: 'card',
+          }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   centerButtonContainer: {

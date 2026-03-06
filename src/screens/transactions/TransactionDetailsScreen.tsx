@@ -1,16 +1,16 @@
-// screens/TransactionDetailsScreen.tsx
+// src/screens/transactions/TransactionDetailsScreen.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTransactions } from '../../contexts/TransactionContext';
 import { useWallets } from '../../contexts/WalletContext';
-import { useGoals } from '../../contexts/GoalContext';
+import { useBudgets } from '../../contexts/BudgetContext';
+import { useSavings } from '../../contexts/SavingsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useCategories } from '../../contexts/CategoryContext';
-import { RootNavigationProp, TransactionDetailsRouteProp } from '../../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AppHeader from '@/components/AppHeader';
+import AppHeader from '../../components/AppHeader';
 
 const TYPE_CONFIG = {
   expense: { color: '#EF4444', label: 'Expense', symbol: '−' },
@@ -19,13 +19,14 @@ const TYPE_CONFIG = {
 } as const;
 
 export default function TransactionDetailsScreen() {
-  const navigation = useNavigation<RootNavigationProp>();
-  const route = useRoute<TransactionDetailsRouteProp>();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { transactions, deleteTransaction } = useTransactions();
   const { wallets } = useWallets();
-  const { goals } = useGoals();
+  const { budgets } = useBudgets();
+  const { savingsGoals } = useSavings();
   const { currency } = useSettings();
-  const { getCategoryById, expenseCategories, incomeCategories } = useCategories();
+  const { getCategoryById } = useCategories();
   const insets = useSafeAreaInsets();
 
   const { transactionId } = route.params;
@@ -33,13 +34,25 @@ export default function TransactionDetailsScreen() {
 
   if (!transaction) {
     return (
-      <View className="flex-1 bg-background justify-center items-center">
-        <Text className="text-textSecondary text-base mb-4">Transaction not found</Text>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#F8FAFC',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Text style={{ color: '#64748B', fontSize: 16, marginBottom: 16 }}>Not found</Text>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          className="bg-primary px-6 py-3 rounded-2xl"
+          style={{
+            backgroundColor: '#14B8A6',
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            borderRadius: 12,
+          }}
         >
-          <Text className="text-white font-semibold">Go Back</Text>
+          <Text style={{ color: '#FFF', fontWeight: '600' }}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -48,21 +61,19 @@ export default function TransactionDetailsScreen() {
   const isTransfer = transaction.type === 'transfer';
   const config = TYPE_CONFIG[transaction.type as keyof typeof TYPE_CONFIG] ?? TYPE_CONFIG.expense;
 
-  const fromWallet = wallets.find(w => w.name === transaction.wallet);
+  const fromWallet = wallets.find(w => w.id === transaction.walletId);
   const toWallet = transaction.toWalletId
     ? wallets.find(w => w.id === transaction.toWalletId)
     : null;
-  const toGoal = transaction.toGoalId ? goals.find(g => g.id === transaction.toGoalId) : null;
+  const toGoal = transaction.toGoalId
+    ? budgets.find(g => g.id === transaction.toGoalId) ||
+      savingsGoals.find(g => g.id === transaction.toGoalId)
+    : null;
 
-  // Resolve category — id first, then name fallback for old transactions
-  const resolvedCategory = transaction.categoryId
-    ? getCategoryById(transaction.categoryId)
-    : (transaction.type === 'expense' ? expenseCategories : incomeCategories).find(
-        c => c.name === transaction.category
-      );
+  const resolvedCategory = transaction.categoryId ? getCategoryById(transaction.categoryId) : null;
   const categoryDisplay = resolvedCategory
     ? `${resolvedCategory.icon}  ${resolvedCategory.name}`
-    : transaction.category || '—';
+    : '—';
 
   const formatDate = (s: string) =>
     new Date(s).toLocaleDateString('en-US', {
@@ -75,7 +86,7 @@ export default function TransactionDetailsScreen() {
     new Date(s).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   const handleDelete = () => {
-    Alert.alert('Delete Transaction', 'This action cannot be undone.', [
+    Alert.alert('Delete?', 'This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -85,7 +96,7 @@ export default function TransactionDetailsScreen() {
             await deleteTransaction(transaction.id);
             navigation.goBack();
           } catch {
-            Alert.alert('Error', 'Failed to delete transaction.');
+            Alert.alert('Error', 'Failed to delete');
           }
         },
       },
@@ -93,7 +104,7 @@ export default function TransactionDetailsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
       <AppHeader
         title="Details"
         onBack={() => navigation.goBack()}
@@ -107,30 +118,41 @@ export default function TransactionDetailsScreen() {
       />
 
       <View style={{ backgroundColor: config.color }}>
-        <View className="items-center pb-9 pt-1">
-          <Text className="text-white/70 text-sm mb-1">{config.label}</Text>
-          <Text className="text-white font-extrabold" style={{ fontSize: 52, letterSpacing: -1 }}>
+        <View style={{ alignItems: 'center', paddingBottom: 36, paddingTop: 4 }}>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginBottom: 4 }}>
+            {config.label}
+          </Text>
+          <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 52, letterSpacing: -1 }}>
             {currency.symbol}
             {Math.abs(transaction.amount).toFixed(2)}
           </Text>
-          <Text className="text-white/65 text-sm mt-2">{transaction.title}</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, marginTop: 8 }}>
+            {transaction.title}
+          </Text>
         </View>
-        <View className="bg-background rounded-t-3xl" style={{ height: 28 }} />
+        <View
+          style={{
+            backgroundColor: '#F8FAFC',
+            height: 28,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+          }}
+        />
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 120 }}
       >
         <View
-          className="bg-card rounded-2xl overflow-hidden"
           style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 3,
-            elevation: 1,
+            backgroundColor: '#FFF',
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+            marginTop: -12,
+            overflow: 'hidden',
           }}
         >
           <DetailRow icon="calendar-outline" label="Date" value={formatDate(transaction.date)} />
@@ -146,14 +168,14 @@ export default function TransactionDetailsScreen() {
               <DetailRow
                 icon="wallet-outline"
                 label="From"
-                value={fromWallet ? `${fromWallet.icon}  ${fromWallet.name}` : transaction.wallet}
+                value={fromWallet ? `${fromWallet.icon}  ${fromWallet.name}` : 'Unknown'}
               />
               {toWallet && (
                 <>
                   <Divider />
                   <DetailRow
                     icon="arrow-forward-outline"
-                    label="To Wallet"
+                    label="To"
                     value={`${toWallet.icon}  ${toWallet.name}`}
                   />
                 </>
@@ -163,15 +185,9 @@ export default function TransactionDetailsScreen() {
                   <Divider />
                   <DetailRow
                     icon="flag-outline"
-                    label="Earmarked For"
+                    label="Goal"
                     value={`${toGoal.icon}  ${toGoal.name}`}
                   />
-                </>
-              )}
-              {!toWallet && !toGoal && (
-                <>
-                  <Divider />
-                  <DetailRow icon="help-circle-outline" label="To" value="Unknown destination" />
                 </>
               )}
             </>
@@ -183,79 +199,106 @@ export default function TransactionDetailsScreen() {
               <DetailRow
                 icon="wallet-outline"
                 label="Wallet"
-                value={fromWallet ? `${fromWallet.icon}  ${fromWallet.name}` : transaction.wallet}
+                value={fromWallet ? `${fromWallet.icon}  ${fromWallet.name}` : 'Unknown'}
               />
             </>
           )}
         </View>
 
         {transaction.notes ? (
-          <View className="mt-3">
-            <SectionLabel label="Notes" />
-            <View
-              className="bg-card rounded-2xl"
+          <View style={{ marginTop: 16 }}>
+            <Text
               style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
-                elevation: 1,
+                color: '#64748B',
+                fontSize: 12,
+                fontWeight: '600',
+                marginBottom: 8,
+                textTransform: 'uppercase',
               }}
             >
-              <Text className="text-textPrimary text-base leading-6 p-4">{transaction.notes}</Text>
+              Notes
+            </Text>
+            <View
+              style={{
+                backgroundColor: '#FFF',
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                padding: 16,
+              }}
+            >
+              <Text style={{ color: '#0F172A', fontSize: 16, lineHeight: 24 }}>
+                {transaction.notes}
+              </Text>
             </View>
-          </View>
-        ) : null}
-
-        {transaction.receiptUri ? (
-          <View className="mt-3">
-            <SectionLabel label="Attachment" />
-            <Image
-              source={{ uri: transaction.receiptUri }}
-              className="w-full rounded-2xl"
-              style={{ height: 200 }}
-              resizeMode="cover"
-            />
           </View>
         ) : null}
       </ScrollView>
 
       <View
-        className="absolute bottom-0 left-0 right-0 bg-card border-t border-border px-4 pt-3"
-        style={{ paddingBottom: insets.bottom + 12 }}
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: '#FFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E2E8F0',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          paddingBottom: insets.bottom + 12,
+        }}
       >
         <TouchableOpacity
           onPress={handleDelete}
           activeOpacity={0.7}
-          className="bg-expense/10 rounded-2xl py-4 flex-row items-center justify-center gap-2"
+          style={{
+            backgroundColor: 'rgba(239,68,68,0.1)',
+            borderRadius: 12,
+            paddingVertical: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}
         >
           <Ionicons name="trash-outline" size={18} color="#EF4444" />
-          <Text className="text-expense font-bold text-base">Delete Transaction</Text>
+          <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 16 }}>Delete</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-function SectionLabel({ label }: { label: string }) {
-  return (
-    <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider mb-2">
-      {label}
-    </Text>
-  );
-}
 function Divider() {
-  return <View className="h-px bg-border mx-4" />;
+  return <View style={{ height: 1, backgroundColor: '#E2E8F0', marginHorizontal: 16 }} />;
 }
+
 function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 13 }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        gap: 12,
+        paddingVertical: 13,
+      }}
+    >
       <Ionicons name={icon as any} size={18} color="#94A3B8" />
-      <View className="flex-1">
-        <Text className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-0.5">
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            color: '#94A3B8',
+            fontSize: 11,
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            marginBottom: 2,
+          }}
+        >
           {label}
         </Text>
-        <Text className="text-textPrimary text-base font-medium">{value}</Text>
+        <Text style={{ color: '#0F172A', fontSize: 16, fontWeight: '500' }}>{value}</Text>
       </View>
     </View>
   );

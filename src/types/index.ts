@@ -1,26 +1,118 @@
 // src/types/index.ts
+
 export const DEFAULT_CREATED_AT = '2025-01-01T00:00:00.000Z';
+
+// ─── Primitives ───────────────────────────────────────────────────────────────
+
+export type TransactionType = 'income' | 'expense' | 'transfer';
+export type CategoryType = 'income' | 'expense';
+export type WalletType = 'checking' | 'savings' | 'cash' | 'credit' | 'investment';
+export type GoalType = 'savings' | 'budget';
+export type BudgetPeriod = 'weekly' | 'monthly' | 'yearly';
+export type TransactionStatus = 'pending' | 'cleared' | 'reconciled';
+
+// ─── Attachment ───────────────────────────────────────────────────────────────
+
+export interface Attachment {
+  uri: string;
+  type: 'image' | 'pdf';
+  label?: string;
+}
+
+// ─── Transaction ─────────────────────────────────────────────────────────────
 
 export interface Transaction {
   id: string;
   title: string;
-  amount: number;
-  category: string; // legacy: stores name, kept for backward compat
-  categoryId?: string; // new: stores id, use this going forward
-  date: string;
-  wallet: string;
-  type: 'income' | 'expense' | 'transfer';
-  notes?: string;
-  toWalletId?: string;
-  toGoalId?: string;
+  amount: number; // in wallet's currency
+  type: TransactionType;
+  categoryId: string; // 'transfer' for transfers, use TRANSFER_CATEGORY_ID
+  walletId: string; // source wallet id
+  date: string; // ISO string
   hasTime?: boolean;
-  receiptUri?: string;
+  notes?: string;
+  attachments?: Attachment[];
+  status?: TransactionStatus;
+  merchant?: string;
+  tagIds?: string[];
+  recurringId?: string; // links to RecurringTransaction when built
+  toWalletId?: string; // transfer destination wallet
+  toGoalId?: string; // transfer destination goal
+  currency?: string; // only set if premium + different from home currency
+  amountInHomeCurrency?: number; // only set if currency differs
+  exchangeRate?: number; // only set if currency differs
 }
 
-export type TransactionType = 'income' | 'expense' | 'transfer';
-export type CategoryType = 'income' | 'expense';
+export type NewTransaction = Omit<Transaction, 'id'>;
 
-export type WalletType = 'checking' | 'savings' | 'cash' | 'credit' | 'investment';
+// ─── Category ────────────────────────────────────────────────────────────────
+
+export interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  type: CategoryType;
+  isDefault?: boolean;
+}
+
+export const TRANSFER_CATEGORY_ID = 'transfer';
+
+export const EXPENSE_CATEGORIES: Category[] = [
+  { id: 'cat_1', name: 'Food', icon: '🍔', color: '#EF4444', type: 'expense', isDefault: true },
+  {
+    id: 'cat_2',
+    name: 'Transport',
+    icon: '🚗',
+    color: '#F59E0B',
+    type: 'expense',
+    isDefault: true,
+  },
+  { id: 'cat_3', name: 'Shopping', icon: '🛍️', color: '#8B5CF6', type: 'expense', isDefault: true },
+  { id: 'cat_4', name: 'Bills', icon: '📄', color: '#0891B2', type: 'expense', isDefault: true },
+  {
+    id: 'cat_5',
+    name: 'Education',
+    icon: '📚',
+    color: '#10B981',
+    type: 'expense',
+    isDefault: true,
+  },
+  {
+    id: 'cat_6',
+    name: 'Entertainment',
+    icon: '🎬',
+    color: '#EC4899',
+    type: 'expense',
+    isDefault: true,
+  },
+  { id: 'cat_7', name: 'Health', icon: '💊', color: '#22C55E', type: 'expense', isDefault: true },
+  { id: 'cat_8', name: 'Other', icon: '📦', color: '#64748B', type: 'expense', isDefault: true },
+];
+
+export const INCOME_CATEGORIES: Category[] = [
+  { id: 'cat_9', name: 'Salary', icon: '💰', color: '#22C55E', type: 'income', isDefault: true },
+  {
+    id: 'cat_10',
+    name: 'Freelance',
+    icon: '💼',
+    color: '#14B8A6',
+    type: 'income',
+    isDefault: true,
+  },
+  { id: 'cat_11', name: 'Gift', icon: '🎁', color: '#EC4899', type: 'income', isDefault: true },
+  {
+    id: 'cat_12',
+    name: 'Investment',
+    icon: '📈',
+    color: '#8B5CF6',
+    type: 'income',
+    isDefault: true,
+  },
+  { id: 'cat_13', name: 'Other', icon: '💵', color: '#64748B', type: 'income', isDefault: true },
+];
+
+// ─── Wallet ───────────────────────────────────────────────────────────────────
 
 export interface Wallet {
   id: string;
@@ -28,36 +120,12 @@ export interface Wallet {
   icon: string;
   color: string;
   type: WalletType;
+  currency?: string; // optional — only set if premium + different from home
   creditLimit?: number;
   createdAt: string;
 }
 
-export type Category = {
-  id: string;
-  name: string;
-  icon: string;
-  color?: string;
-  type: CategoryType;
-};
-
-export const EXPENSE_CATEGORIES: Category[] = [
-  { id: '1', name: 'Food', icon: '🍔', color: '#EF4444', type: 'expense' },
-  { id: '2', name: 'Transport', icon: '🚗', color: '#F59E0B', type: 'expense' },
-  { id: '3', name: 'Shopping', icon: '🛍️', color: '#8B5CF6', type: 'expense' },
-  { id: '4', name: 'Bills', icon: '📄', color: '#0891B2', type: 'expense' },
-  { id: '5', name: 'Education', icon: '📚', color: '#10B981', type: 'expense' },
-  { id: '6', name: 'Entertainment', icon: '🎬', color: '#EC4899', type: 'expense' },
-  { id: '7', name: 'Health', icon: '💊', color: '#22C55E', type: 'expense' },
-  { id: '8', name: 'Other', icon: '📦', color: '#64748B', type: 'expense' },
-];
-
-export const INCOME_CATEGORIES: Category[] = [
-  { id: '9', name: 'Salary', icon: '💰', color: '#22C55E', type: 'income' },
-  { id: '10', name: 'Freelance', icon: '💼', color: '#14B8A6', type: 'income' },
-  { id: '11', name: 'Gift', icon: '🎁', color: '#EC4899', type: 'income' },
-  { id: '12', name: 'Investment', icon: '📈', color: '#8B5CF6', type: 'income' },
-  { id: '13', name: 'Other', icon: '💵', color: '#64748B', type: 'income' },
-];
+export type NewWallet = Omit<Wallet, 'id' | 'createdAt'>;
 
 export const WALLET_TYPES: {
   type: WalletType;
@@ -76,35 +144,39 @@ export const SAVINGS_WALLET_TYPES: WalletType[] = ['savings', 'cash'];
 
 export const DEFAULT_WALLETS: Wallet[] = [
   {
-    id: '1',
+    id: 'wallet_1',
     name: 'Main Wallet',
     icon: '👛',
     color: '#0891B2',
     type: 'checking',
+    currency: 'USD',
     createdAt: DEFAULT_CREATED_AT,
   },
   {
-    id: '2',
+    id: 'wallet_2',
     name: 'Cash',
     icon: '💵',
     color: '#10B981',
     type: 'cash',
+    currency: 'USD',
     createdAt: DEFAULT_CREATED_AT,
   },
   {
-    id: '3',
+    id: 'wallet_3',
     name: 'Credit Card',
     icon: '💳',
     color: '#F59E0B',
     type: 'credit',
+    currency: 'USD',
     createdAt: DEFAULT_CREATED_AT,
   },
   {
-    id: '4',
+    id: 'wallet_4',
     name: 'Savings',
     icon: '🏦',
     color: '#8B5CF6',
     type: 'savings',
+    currency: 'USD',
     createdAt: DEFAULT_CREATED_AT,
   },
 ];
@@ -124,19 +196,47 @@ export const WALLET_COLORS = [
 
 export const WALLET_ICONS = ['👛', '💵', '💳', '🏦', '💰', '📱', '🪙', '💎', '🎯', '📦'];
 
-export type GoalType = 'savings' | 'budget';
+// ─── Goal ─────────────────────────────────────────────────────────────────────
 
 export interface Goal {
   id: string;
   type: GoalType;
   name: string;
   targetAmount: number;
-  category?: string;
-  period?: 'weekly' | 'monthly' | 'yearly';
+  categoryId?: string; // budget goals only
+  period?: BudgetPeriod; // budget goals only
+  deadline?: string; // savings goals only — ISO date string
+  walletId?: string; // savings goals only — which wallet holds this money
   icon: string;
   color: string;
-  deadline?: string;
   createdAt: string;
 }
 
 export type NewGoal = Omit<Goal, 'id' | 'createdAt'>;
+
+// ─── Tag ──────────────────────────────────────────────────────────────────────
+
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+}
+
+// ─── User Profile ─────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  name: string;
+  avatarUri?: string;
+  homeCurrency: string;
+  createdAt: string;
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+
+export interface Settings {
+  homeCurrency: string;
+  theme?: string;
+  firstDayOfWeek?: 0 | 1; // 0 = Sunday, 1 = Monday
+  biometricLock?: boolean;
+  notificationsEnabled?: boolean;
+}

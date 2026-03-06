@@ -1,20 +1,23 @@
-// screens/WalletDetailScreen.tsx
+// src/screens/wallets/WalletsScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useTransactions } from '../../contexts/TransactionContext';
 import { useWallets } from '../../contexts/WalletContext';
+import { Wallet, WalletType } from '../../types';
 import { useSettings } from '../../contexts/SettingsContext';
-import { RootStackParamList, RootNavigationProp } from '../../navigation/types';
-import TransactionRow from '../../components/TransactionRow';
 import WalletModal from '../../components/WalletModal';
-import AppHeader from '@/components/AppHeader';
-import { Wallet } from '../../types';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AppHeader from '../../components/AppHeader';
+import { Ionicons } from '@expo/vector-icons';
 
-type WalletDetailRouteProp = RouteProp<RootStackParamList, 'WalletDetail'>;
+const TYPE_BADGE: Record<WalletType, { label: string; color: string; bg: string }> = {
+  checking: { label: 'Checking', color: '#0891B2', bg: '#0891B220' },
+  savings: { label: 'Savings', color: '#8B5CF6', bg: '#8B5CF620' },
+  cash: { label: 'Cash', color: '#10B981', bg: '#10B98120' },
+  credit: { label: 'Credit', color: '#F59E0B', bg: '#F59E0B20' },
+  investment: { label: 'Investment', color: '#6366F1', bg: '#6366F120' },
+};
 
 function getCreditAvailableColor(used: number, limit: number): string {
   if (limit === 0) return '#22C55E';
@@ -25,283 +28,334 @@ function getCreditAvailableColor(used: number, limit: number): string {
   return '#22C55E';
 }
 
-export default function WalletDetailScreen() {
-  const navigation = useNavigation<RootNavigationProp>();
-  const route = useRoute<WalletDetailRouteProp>();
-  const { wallets, updateWallet } = useWallets();
-  const { transactions, deleteTransaction } = useTransactions();
+export default function WalletsScreen() {
+  const navigation = useNavigation<any>();
+  const { transactions } = useTransactions();
+  const { wallets, addWallet, updateWallet, deleteWallet } = useWallets();
   const { currency } = useSettings();
-  const insets = useSafeAreaInsets();
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
-  const [period, setPeriod] = useState<'month' | 'all'>('month');
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
 
-  const { walletId } = route.params;
-  const wallet = wallets.find(w => w.id === walletId);
-
-  if (!wallet) {
-    return (
-      <View className="flex-1 bg-background justify-center items-center">
-        <Text className="text-textSecondary text-base mb-4">Wallet not found</Text>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="bg-primary px-6 py-3 rounded-2xl"
-        >
-          <Text className="text-white font-semibold">Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const isCreditType = wallet.type === 'credit';
-
-  const balance = transactions.reduce((sum, t) => {
-    if (t.type === 'transfer') {
-      if (t.wallet === wallet.name) return sum - t.amount;
-      if (t.toWalletId === walletId) return sum + t.amount;
-      return sum;
-    }
-    if (t.wallet === wallet.name) return sum + t.amount;
-    return sum;
-  }, 0);
-
-  const amountOwed = Math.abs(balance);
-  const available = wallet.creditLimit ? Math.max(wallet.creditLimit + balance, 0) : null;
-  const usagePct = wallet.creditLimit ? amountOwed / wallet.creditLimit : 0;
-  const availColor = wallet.creditLimit
-    ? getCreditAvailableColor(amountOwed, wallet.creditLimit)
-    : '#22C55E';
-
-  const now = new Date();
-  const walletTransactions = transactions
-    .filter(t => t.wallet === wallet.name || t.toWalletId === wallet.id)
-    .filter(t => {
-      if (period === 'month') {
-        const d = new Date(t.date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  const getWalletBalance = (walletId: string) => {
+    return transactions.reduce((sum, t) => {
+      if (t.type === 'transfer') {
+        if (t.walletId === walletId) return sum - t.amount;
+        if (t.toWalletId === walletId) return sum + t.amount;
+        return sum;
       }
-      return true;
-    })
-    .filter(t => filterType === 'all' || t.type === filterType)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      if (t.walletId === walletId) return sum + t.amount;
+      return sum;
+    }, 0);
+  };
 
-  const handleDelete = (id: string, title: string) => {
-    Alert.alert('Delete Transaction', `Delete "${title}"?`, [
+  const creditWallets = wallets.filter(w => w.type === 'credit');
+  const assetWallets = wallets.filter(w => w.type !== 'credit');
+  const totalAssets = assetWallets.reduce((sum, w) => sum + getWalletBalance(w.id), 0);
+  const totalOwed = creditWallets.reduce((sum, w) => sum + Math.abs(getWalletBalance(w.id)), 0);
+  const netWorth = totalAssets - totalOwed;
+
+  const checkingWallets = wallets.filter(w => w.type === 'checking');
+  const savingsWallets = wallets.filter(w => w.type === 'savings' || w.type === 'cash');
+  const creditWalletList = wallets.filter(w => w.type === 'credit');
+  const investmentWallets = wallets.filter(w => w.type === 'investment');
+
+  const handleAddWallet = () => {
+    setEditingWallet(null);
+    setModalVisible(true);
+  };
+
+  const handleEditWallet = (wallet: Wallet) => {
+    setEditingWallet(wallet);
+    setModalVisible(true);
+  };
+
+  const handleDeleteWallet = (wallet: Wallet) => {
+    const count = transactions.filter(
+      t => t.walletId === wallet.id || t.toWalletId === wallet.id
+    ).length;
+    if (count > 0) {
+      Alert.alert(
+        'Cannot Delete',
+        `This wallet has ${count} transaction(s). Please move or delete them first.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    Alert.alert('Delete Wallet', `Delete "${wallet.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteTransaction(id);
-          } catch {
-            Alert.alert('Error', 'Failed to delete transaction');
-          }
-        },
-      },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteWallet(wallet.id) },
     ]);
   };
 
   const handleSaveWallet = async (walletData: Omit<Wallet, 'id' | 'createdAt'>) => {
     try {
-      await updateWallet(wallet.id, walletData);
+      if (editingWallet) await updateWallet(editingWallet.id, walletData);
+      else await addWallet(walletData);
+      setModalVisible(false);
     } catch {
-      Alert.alert('Error', 'Failed to update wallet.');
+      Alert.alert('Error', 'Failed to save wallet. Please try again.');
     }
   };
 
-  const renderRightActions = (id: string, title: string) => (
-    <TouchableOpacity
-      onPress={() => handleDelete(id, title)}
-      className="bg-expense justify-center items-center px-5 mb-3 rounded-xl ml-2 gap-1"
-    >
-      <Ionicons name="trash-outline" size={20} color="#fff" />
-      <Text className="text-white text-xs font-semibold">Delete</Text>
-    </TouchableOpacity>
+  const handleWalletPress = (wallet: Wallet) => {
+    navigation.navigate('WalletDetail', { walletId: wallet.id });
+  };
+
+  const renderRightActions = (wallet: Wallet) => (
+    <View className="flex-row gap-2 mb-3 ml-2">
+      <TouchableOpacity
+        onPress={() => handleEditWallet(wallet)}
+        className="bg-primary justify-center items-center px-4 rounded-2xl gap-1"
+      >
+        <Ionicons name="pencil-outline" size={18} color="#fff" />
+        <Text className="text-white text-xs font-semibold">Edit</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => handleDeleteWallet(wallet)}
+        className="bg-expense justify-center items-center px-4 rounded-2xl gap-1"
+      >
+        <Ionicons name="trash-outline" size={18} color="#fff" />
+        <Text className="text-white text-xs font-semibold">Delete</Text>
+      </TouchableOpacity>
+    </View>
   );
 
-  return (
-    <View className="flex-1 bg-background">
-      <AppHeader
-        title={wallet.name}
-        subtitle={wallet.type.charAt(0).toUpperCase() + wallet.type.slice(1)}
-        onBack={() => navigation.goBack()}
-        onEdit={() => setModalVisible(true)}
-        hideMenu
-        backgroundColor={wallet.color}
-      >
-        {/* Balance */}
-        <View className="items-center mb-2">
-          <Text style={{ fontSize: 42, marginBottom: 4 }}>{wallet.icon}</Text>
-          <Text className="text-white/70 text-sm mb-1">
-            {isCreditType ? 'Amount Owed' : 'Balance'}
-          </Text>
-          <Text className="text-white font-extrabold" style={{ fontSize: 44, letterSpacing: -1 }}>
-            {currency.symbol}
-            {isCreditType ? amountOwed.toFixed(2) : Math.abs(balance).toFixed(2)}
-          </Text>
-          {!isCreditType && balance < 0 && (
-            <Text className="text-white/60 text-sm mt-1">Negative balance</Text>
-          )}
-        </View>
+  const renderWalletCard = (wallet: Wallet) => {
+    const balance = getWalletBalance(wallet.id);
+    const count = transactions.filter(
+      t => t.walletId === wallet.id || t.toWalletId === wallet.id
+    ).length;
+    const walletType = wallet.type ?? 'checking';
+    const badge = TYPE_BADGE[walletType];
+    const isCreditType = walletType === 'credit';
 
-        {/* Credit bar */}
-        {isCreditType && wallet.creditLimit && (
-          <View className="mt-2">
-            <View className="h-2 bg-white/20 rounded-full overflow-hidden">
+    const amountOwed = Math.abs(balance);
+    const available = wallet.creditLimit ? Math.max(wallet.creditLimit + balance, 0) : null;
+    const usagePct = wallet.creditLimit ? amountOwed / wallet.creditLimit : 0;
+    const availColor = wallet.creditLimit
+      ? getCreditAvailableColor(amountOwed, wallet.creditLimit)
+      : '#22C55E';
+
+    return (
+      <Swipeable
+        key={wallet.id}
+        renderRightActions={() => renderRightActions(wallet)}
+        overshootRight={false}
+      >
+        <TouchableOpacity
+          onPress={() => handleWalletPress(wallet)}
+          activeOpacity={0.7}
+          className="bg-card rounded-2xl mb-3"
+          style={{
+            shadowColor: wallet.color,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.15,
+            shadowRadius: 6,
+            elevation: 4,
+          }}
+        >
+          {/* Card body */}
+          <View className="px-4 py-4 overflow-hidden rounded-2xl">
+            <View className="flex-row items-center">
               <View
-                className="h-full rounded-full"
-                style={{ width: `${Math.min(usagePct * 100, 100)}%`, backgroundColor: availColor }}
-              />
-            </View>
-            <View className="flex-row justify-between mt-1.5">
-              <Text className="text-white/60 text-xs">
-                {currency.symbol}
-                {amountOwed.toFixed(0)} used
-              </Text>
-              <Text
-                className="text-xs font-semibold"
-                style={{ color: availColor === '#22C55E' ? '#fff' : availColor }}
+                className="w-11 h-11 rounded-xl items-center justify-center mr-3"
+                style={{ backgroundColor: wallet.color + '20' }}
               >
-                {currency.symbol}
-                {available?.toFixed(0)} available
+                <Text style={{ fontSize: 22 }}>{wallet.icon}</Text>
+              </View>
+              <View className="flex-1">
+                <View className="flex-row items-center gap-2 mb-0.5">
+                  <Text className="text-textPrimary font-semibold text-base">{wallet.name}</Text>
+                  <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: badge.bg }}>
+                    <Text className="text-xs font-semibold" style={{ color: badge.color }}>
+                      {badge.label}
+                    </Text>
+                  </View>
+                </View>
+                {(() => {
+                  const last = transactions
+                    .filter(t => t.walletId === wallet.id || t.toWalletId === wallet.id)
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                  return (
+                    <Text className="text-textSecondary text-xs">
+                      {last
+                        ? `Last active: ${new Date(last.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                        : 'No activity yet'}
+                    </Text>
+                  );
+                })()}
+              </View>
+              <Text
+                className={`text-base font-bold ${isCreditType ? (amountOwed > 0 ? 'text-expense' : 'text-income') : balance >= 0 ? 'text-income' : 'text-expense'}`}
+              >
+                {isCreditType
+                  ? `${currency.symbol}${amountOwed.toFixed(2)}`
+                  : `${currency.symbol}${Math.abs(balance).toFixed(2)}`}
               </Text>
             </View>
-            {usagePct >= 0.9 && (
-              <Text className="text-center text-xs mt-1.5" style={{ color: '#FCA5A5' }}>
-                ⚠️ Nearly maxed out
-              </Text>
+
+            {/* Credit usage bar */}
+            {isCreditType && wallet.creditLimit && (
+              <View className="mt-3">
+                <View className="flex-row justify-between items-center mb-1.5">
+                  <Text className="text-textSecondary text-xs">
+                    {currency.symbol}
+                    {amountOwed.toFixed(2)} used of {currency.symbol}
+                    {wallet.creditLimit.toFixed(0)}
+                  </Text>
+                  <Text className="text-xs font-semibold" style={{ color: availColor }}>
+                    {currency.symbol}
+                    {available?.toFixed(0)} available
+                  </Text>
+                </View>
+                {/* Progress bar */}
+                <View className="h-1.5 bg-border rounded-full overflow-hidden">
+                  <View
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(usagePct * 100, 100)}%`,
+                      backgroundColor: availColor,
+                    }}
+                  />
+                </View>
+                {usagePct >= 0.9 && (
+                  <Text className="text-expense text-xs mt-1">⚠️ Nearly maxed out</Text>
+                )}
+              </View>
             )}
           </View>
-        )}
-      </AppHeader>
+        </TouchableOpacity>
+      </Swipeable>
+    );
+  };
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: insets.bottom + 32,
-        }}
-      >
-        {/* Period toggle */}
-        <View
-          className="bg-card rounded-2xl p-1.5 flex-row gap-1 mb-3"
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 3,
-            elevation: 1,
-          }}
-        >
-          {(['month', 'all'] as const).map(p => (
-            <TouchableOpacity
-              key={p}
-              onPress={() => setPeriod(p)}
-              activeOpacity={0.7}
-              className={`flex-1 py-2.5 rounded-xl items-center ${period === p ? 'bg-primary' : ''}`}
-            >
-              <Text
-                className={`font-semibold text-sm ${period === p ? 'text-white' : 'text-textSecondary'}`}
-              >
-                {p === 'month' ? 'This Month' : 'All Time'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Type filter */}
-        <View
-          className="flex-row mb-4 bg-card rounded-2xl p-1.5 gap-1"
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 3,
-            elevation: 1,
-          }}
-        >
-          {(['all', 'income', 'expense', 'transfer'] as const).map(f => {
-            const active = filterType === f;
-            const colors = {
-              all: { active: '#14B8A6', text: '#14B8A6' },
-              income: { active: '#22C55E', text: '#22C55E' },
-              expense: { active: '#EF4444', text: '#EF4444' },
-              transfer: { active: '#14B8A6', text: '#14B8A6' },
-            };
-            const c = colors[f];
-            return (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setFilterType(f)}
-                activeOpacity={0.7}
-                className="flex-1 py-2.5 rounded-xl items-center"
-                style={{ backgroundColor: active ? c.active : 'transparent' }}
-              >
-                <Text className="text-xs font-semibold" style={{ color: active ? '#fff' : c.text }}>
-                  {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+  return (
+    <>
+      <ScrollView className="flex-1 bg-background">
+        <AppHeader title="Wallets" subtitle="Manage your accounts" titleAlign="left">
+          {/* Summary card */}
+          <View className="bg-white/10 rounded-2xl p-4 gap-3">
+            {creditWallets.length > 0 ? (
+              <>
+                {/* Net worth — primary */}
+                <View className="items-center pb-3 border-b border-white/20">
+                  <Text className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-1">
+                    Net Worth
+                  </Text>
+                  <Text
+                    className="text-white font-extrabold"
+                    style={{ fontSize: 36, letterSpacing: -1 }}
+                  >
+                    {currency.symbol}
+                    {Math.abs(netWorth).toFixed(2)}
+                  </Text>
+                  {netWorth < 0 && (
+                    <Text className="text-orange-300 text-xs mt-1">You owe more than you own</Text>
+                  )}
+                </View>
+                {/* Assets + Owed */}
+                <View className="flex-row">
+                  <View className="flex-1 items-center">
+                    <Text className="text-white/60 text-xs mb-0.5">Assets</Text>
+                    <Text className="text-white font-bold text-base">
+                      {currency.symbol}
+                      {totalAssets.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View className="w-px bg-white/20" />
+                  <View className="flex-1 items-center">
+                    <Text className="text-white/60 text-xs mb-0.5">Credit Owed</Text>
+                    <Text
+                      className="font-bold text-base"
+                      style={{ color: totalOwed > 0 ? '#FED7AA' : '#fff' }}
+                    >
+                      {currency.symbol}
+                      {totalOwed.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View className="items-center py-2">
+                <Text className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-1">
+                  Total Balance
                 </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Section header */}
-        <View className="flex-row items-center gap-3 mb-3">
-          <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider">
-            Transactions
-          </Text>
-          <View className="flex-1 h-px bg-border" />
-          <Text className="text-textSecondary text-xs font-semibold">
-            {walletTransactions.length}
-          </Text>
-        </View>
-
-        {/* List */}
-        {walletTransactions.length === 0 ? (
-          <View
-            className="bg-card rounded-2xl p-8 items-center"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 3,
-              elevation: 1,
-            }}
-          >
-            <Text style={{ fontSize: 36, marginBottom: 12 }}>💸</Text>
-            <Text className="text-textPrimary font-semibold text-base mb-1">No transactions</Text>
-            <Text className="text-textSecondary text-sm text-center">
-              {filterType !== 'all' || period === 'month'
-                ? 'No transactions match the current filter'
-                : 'Transactions linked to this wallet will appear here'}
-            </Text>
+                <Text
+                  className="text-white font-extrabold"
+                  style={{ fontSize: 36, letterSpacing: -1 }}
+                >
+                  {currency.symbol}
+                  {totalAssets.toFixed(2)}
+                </Text>
+              </View>
+            )}
           </View>
-        ) : (
-          walletTransactions.map(t => (
-            <Swipeable
-              key={t.id}
-              renderRightActions={() => renderRightActions(t.id, t.title)}
-              overshootRight={false}
+        </AppHeader>
+
+        <View className="px-4 pt-4 pb-8">
+          {[
+            { label: 'Checking', emoji: '👛', list: checkingWallets },
+            { label: 'Savings & Cash', emoji: '🏦', list: savingsWallets },
+            { label: 'Credit Cards', emoji: '💳', list: creditWalletList },
+            { label: 'Investments', emoji: '📈', list: investmentWallets },
+          ]
+            .filter(group => group.list.length > 0)
+            .map(group => (
+              <View key={group.label} className="mb-4">
+                <View className="flex-row items-center gap-2 mb-3">
+                  <Text style={{ fontSize: 13 }}>{group.emoji}</Text>
+                  <Text className="text-textSecondary text-xs font-semibold uppercase tracking-wider">
+                    {group.label}
+                  </Text>
+                  <View className="flex-1 h-px bg-border" />
+                  <Text className="text-textSecondary text-xs font-semibold">
+                    {group.list.length}
+                  </Text>
+                </View>
+                {group.list.map(renderWalletCard)}
+              </View>
+            ))}
+
+          {wallets.length === 0 && (
+            <View
+              className="bg-card rounded-2xl p-8 items-center mb-4"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.05,
+                shadowRadius: 3,
+                elevation: 1,
+              }}
             >
-              <TransactionRow
-                transaction={t}
-                onPress={id => navigation.navigate('TransactionDetails', { transactionId: id })}
-              />
-            </Swipeable>
-          ))
-        )}
+              <Text style={{ fontSize: 36, marginBottom: 12 }}>👛</Text>
+              <Text className="text-textPrimary font-semibold text-base mb-1">No wallets yet</Text>
+              <Text className="text-textSecondary text-sm text-center">
+                Add a wallet to get started
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={handleAddWallet}
+            activeOpacity={0.7}
+            className="bg-card border border-dashed border-border rounded-2xl py-5 items-center gap-1.5 mt-2"
+          >
+            <View className="w-10 h-10 rounded-full bg-filterBar items-center justify-center">
+              <Ionicons name="add" size={22} color="#14B8A6" />
+            </View>
+            <Text className="text-textPrimary font-medium text-sm mt-1">Add New Wallet</Text>
+            <Text className="text-textSecondary text-xs">Create a custom wallet</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <WalletModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSaveWallet}
-        editWallet={wallet}
+        editWallet={editingWallet}
       />
-    </View>
+    </>
   );
 }
