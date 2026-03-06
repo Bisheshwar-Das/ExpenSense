@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallets } from '../contexts/WalletContext';
+import { useWallets } from '../../contexts/WalletContext';
 
 interface WalletPickerProps {
   selectedWallet: string;

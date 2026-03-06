@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useWallets } from '../contexts/WalletContext';
-import { Wallet, WalletType, SAVINGS_WALLET_TYPES } from '../types';
-import { useSettings } from '../contexts/SettingsContext';
-import WalletModal from '../components/WalletModal';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useWallets } from '../../contexts/WalletContext';
+import { Wallet, WalletType, SAVINGS_WALLET_TYPES } from '../../types';
+import { useSettings } from '../../contexts/SettingsContext';
+import WalletModal from '../../components/WalletModal';
 import AppHeader from '@/components/AppHeader';
 import { Ionicons } from '@expo/vector-icons';
-import { RootNavigationProp } from '../navigation/types';
+import { RootNavigationProp } from '../../navigation/types';
 
 const TYPE_BADGE: Record<WalletType, { label: string; color: string; bg: string }> = {
   checking: { label: 'Checking', color: '#0891B2', bg: '#0891B220' },

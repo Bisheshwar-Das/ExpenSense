@@ -3,11 +3,11 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useWallets } from '../contexts/WalletContext';
-import { useGoals } from '../contexts/GoalContext';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { SAVINGS_WALLET_TYPES } from '../types';
+import { useWallets } from '../../contexts/WalletContext';
+import { useGoals } from '../../contexts/GoalContext';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { SAVINGS_WALLET_TYPES } from '../../types';
 
 interface TransferToPickerProps {
   selectedWalletId: string;

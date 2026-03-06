@@ -14,20 +14,24 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Category } from '../types';
+import { Category, TransactionType } from '../../types';
+import { useCategories } from '../../contexts/CategoryContext';
 
 interface Props {
-  categories: Category[];
+  type: TransactionType;
   selectedCategory: Category | null;
   onSelectCategory: (category: Category) => void;
 }
 
-export default function CategoryPicker({ categories, selectedCategory, onSelectCategory }: Props) {
+export default function CategoryPicker({ type, selectedCategory, onSelectCategory }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const { expenseCategories, incomeCategories } = useCategories();
+  const categories = type === 'expense' ? expenseCategories : incomeCategories;
 
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', e =>
@@ -214,17 +218,19 @@ export default function CategoryPicker({ categories, selectedCategory, onSelectC
                   </View>
                 ) : (
                   filtered.map(cat => {
-                    const isSelected = selectedCategory?.name === cat.name;
+                    const isSelected = selectedCategory?.id === cat.id;
+                    const color = (cat as any).color ?? '#14B8A6';
                     return (
                       <TouchableOpacity
-                        key={cat.name}
+                        key={cat.id}
                         onPress={() => handleSelect(cat)}
                         activeOpacity={0.65}
                         className={`flex-row items-center px-4 rounded-2xl ${isSelected ? 'bg-teal-100 border-2 border-teal-300' : 'bg-card'}`}
                         style={{ paddingVertical: 11, gap: 14 }}
                       >
                         <View
-                          className={`w-10 h-10 rounded-xl items-center justify-center ${isSelected ? 'bg-teal-200' : 'bg-background'}`}
+                          className={`w-10 h-10 rounded-xl items-center justify-center`}
+                          style={{ backgroundColor: isSelected ? '#99F6E4' : color + '20' }}
                         >
                           <Text style={{ fontSize: 21 }}>{cat.icon}</Text>
                         </View>

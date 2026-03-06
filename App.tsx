@@ -11,6 +11,7 @@ import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context'; // ⭐ Add this import
+import { CategoryProvider } from '@/contexts/CategoryContext';
 
 // Wrapper component to check onboarding status
 function AppContent() {
@@ -35,16 +36,18 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SettingsProvider>
-        <TransactionProvider>
-          <WalletProvider>
-            <GoalProvider>
-              <OnboardingProvider>
-                <StatusBar style="light" translucent backgroundColor="transparent" />
-                <AppContent />
-              </OnboardingProvider>
-            </GoalProvider>
-          </WalletProvider>
-        </TransactionProvider>
+        <CategoryProvider>
+          <TransactionProvider>
+            <WalletProvider>
+              <GoalProvider>
+                <OnboardingProvider>
+                  <StatusBar style="light" translucent backgroundColor="transparent" />
+                  <AppContent />
+                </OnboardingProvider>
+              </GoalProvider>
+            </WalletProvider>
+          </TransactionProvider>
+        </CategoryProvider>
       </SettingsProvider>
     </SafeAreaProvider>
   );

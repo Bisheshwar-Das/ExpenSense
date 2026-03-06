@@ -16,13 +16,13 @@ import {
   Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, Category } from '../types';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useWallets } from '../contexts/WalletContext';
-import { useSettings } from '../contexts/SettingsContext';
-import CategoryPicker from '../components/CategoryPicker';
-import WalletPicker from '../components/WalletPicker';
-import TransferToPicker from '../components/TransferToPicker';
+import { Category } from '../../types';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useWallets } from '../../contexts/WalletContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import CategoryPicker from '../../components/pickers/CategoryPicker';
+import WalletPicker from '../../components/pickers/WalletPicker';
+import TransferToPicker from '../../components/pickers/TransferToPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -181,7 +181,6 @@ export default function AddTransactionScreen() {
     }
   }, [showSuccessModal]);
 
-  const categories = form.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const displayAmount = useMemo(() => parseAmountParts(form.amount), [form.amount]);
   const config = TYPE_CONFIG[form.type];
   const snapshotConfig = snapshot ? TYPE_CONFIG[snapshot.type] : config;
@@ -197,7 +196,6 @@ export default function AddTransactionScreen() {
       dispatch({ type: 'SET_FIELD', field, value }),
     []
   );
-
   const handleTypeChange = useCallback(
     (value: FullTransactionType) => dispatch({ type: 'SET_TYPE', value }),
     []
@@ -259,6 +257,7 @@ export default function AddTransactionScreen() {
         amount: form.type === 'expense' ? -num : num,
         type: form.type === 'transfer' ? 'transfer' : form.type,
         category: form.type === 'transfer' ? 'Transfer' : (form.selectedCategory?.name ?? ''),
+        categoryId: form.type === 'transfer' ? undefined : (form.selectedCategory?.id ?? undefined),
         date: form.date.toISOString(),
         hasTime: form.hasTime,
         wallet: form.selectedWallet,
@@ -296,7 +295,6 @@ export default function AddTransactionScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-background"
     >
-      {/* Header */}
       <AppHeader
         title="Add Transaction"
         onBack={() => {
@@ -423,10 +421,10 @@ export default function AddTransactionScreen() {
             </View>
           </View>
 
-          {/* Category */}
+          {/* Category — now gets type, pulls categories from context internally */}
           {form.type !== 'transfer' && (
             <CategoryPicker
-              categories={categories}
+              type={form.type}
               selectedCategory={form.selectedCategory}
               onSelectCategory={v => setField('selectedCategory', v)}
             />

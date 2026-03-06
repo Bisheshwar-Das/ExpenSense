@@ -7,19 +7,23 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 
 // Import screens
-import DashboardScreen from '../screens/DashboardScreen';
-import WalletsScreen from '../screens/WalletsScreen';
-import GoalsScreen from '../screens/GoalsScreen';
-import ReportsScreen from '../screens/ReportsScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import AddTransactionScreen from '../screens/AddTransactionScreen';
-import TransactionDetailsScreen from '../screens/TransactionDetailsScreen';
-import EditTransactionScreen from '../screens/EditTransactionScreen';
-import TransactionsScreen from '../screens/TransactionsScreen';
+import DashboardScreen from '../screens/dashboard/DashboardScreen';
+import WalletsScreen from '../screens/wallets/WalletsScreen';
+import ReportsScreen from '../screens/reports/ReportsScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
+import AddTransactionScreen from '../screens/transactions/AddTransactionScreen';
+import TransactionDetailsScreen from '../screens/transactions/TransactionDetailsScreen';
+import EditTransactionScreen from '../screens/transactions/EditTransactionScreen';
+import TransactionsScreen from '../screens/transactions/TransactionsScreen';
+import HubScreen from '../screens/hub/HubScreen';
+import SavingsScreen from '../screens/hub/SavingsScreen';
+import BudgetsScreen from '../screens/hub/BudgetsScreen';
+import CategoriesScreen from '../screens/hub/CategoriesScreen';
+import AddEditCategoryScreen from '@/screens/hub/AddEditCategoryScreen';
 
 // Import types
 import { RootStackParamList, TabParamList } from './types';
-import WalletDetailScreen from '@/screens/WalletDetailScreen';
+import WalletDetailScreen from '@/screens/wallets/WalletDetailScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -94,12 +98,13 @@ function TabNavigator() {
         }}
       />
 
-      {/* Goals Tab */}
       <Tab.Screen
-        name="Goals"
-        component={GoalsScreen}
+        name="Hub"
+        component={HubScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="flag" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="grid-outline" size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -135,22 +140,28 @@ export default function AppNavigator() {
           <Stack.Screen
             name="EditTransaction"
             component={EditTransactionScreen}
-            options={{
-              headerShown: false,
-            }}
+            options={{ headerShown: false }}
           />
-
-          {/* Settings Screen - Now a modal */}
           <Stack.Screen
             name="Settings"
             component={SettingsScreen}
-            options={{
-              headerShown: false,
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="WalletDetail"
             component={WalletDetailScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="Savings" component={SavingsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Budgets" component={BudgetsScreen} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="AddEditCategory"
+            component={AddEditCategoryScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Categories"
+            component={CategoriesScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

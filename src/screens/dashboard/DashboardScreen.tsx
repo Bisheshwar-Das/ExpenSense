@@ -3,13 +3,12 @@ import React from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useWallets } from '../contexts/WalletContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { RootNavigationProp } from '../navigation/types';
-import GoalsSummaryWidget from '../components/GoalsSummaryWidget';
-import AppHeader from '../components/AppHeader';
-import TransactionRow from '../components/TransactionRow';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useWallets } from '../../contexts/WalletContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { RootNavigationProp } from '../../navigation/types';
+import AppHeader from '../../components/AppHeader';
+import TransactionRow from '../../components/TransactionRow';
 
 export default function DashboardScreen() {
   const navigation = useNavigation<RootNavigationProp>();
@@ -198,9 +197,6 @@ export default function DashboardScreen() {
           </View>
         )}
       </AppHeader>
-
-      {/* Goals summary */}
-      <GoalsSummaryWidget />
 
       {/* Recent transactions */}
       <View className="px-6 pb-6">

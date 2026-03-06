@@ -1,10 +1,10 @@
 // screens/ReportsScreen.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Dimensions, Animated } from 'react-native';
-import { useTransactions } from '../contexts/TransactionContext';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types';
-import { useSettings } from '../contexts/SettingsContext';
-import AppHeader from '../components/AppHeader';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../../types';
+import { useSettings } from '../../contexts/SettingsContext';
+import AppHeader from '../../components/AppHeader';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 

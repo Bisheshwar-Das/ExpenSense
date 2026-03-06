@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSettings, CURRENCIES, Currency } from '../contexts/SettingsContext';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useWallets } from '../contexts/WalletContext';
-import { useGoals } from '../contexts/GoalContext';
+import { useSettings, CURRENCIES, Currency } from '../../contexts/SettingsContext';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useWallets } from '../../contexts/WalletContext';
+import { useGoals } from '../../contexts/GoalContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

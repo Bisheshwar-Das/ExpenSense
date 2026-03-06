@@ -15,14 +15,15 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, Category } from '../types';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useWallets } from '../contexts/WalletContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { RootNavigationProp, EditTransactionRouteProp } from '../navigation/types';
-import CategoryPicker from '../components/CategoryPicker';
-import WalletPicker from '../components/WalletPicker';
-import TransferToPicker from '../components/TransferToPicker';
+import { Category } from '../../types';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useWallets } from '../../contexts/WalletContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useCategories } from '../../contexts/CategoryContext';
+import { RootNavigationProp, EditTransactionRouteProp } from '../../navigation/types';
+import CategoryPicker from '../../components/pickers/CategoryPicker';
+import WalletPicker from '../../components/pickers/WalletPicker';
+import TransferToPicker from '../../components/pickers/TransferToPicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -61,6 +62,7 @@ export default function EditTransactionScreen() {
   const { transactions, updateTransaction } = useTransactions();
   const { wallets } = useWallets();
   const { currency } = useSettings();
+  const { expenseCategories, incomeCategories } = useCategories();
   const insets = useSafeAreaInsets();
   const amountInputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -73,7 +75,6 @@ export default function EditTransactionScreen() {
   const [type, setType] = useState<FullTransactionType>('expense');
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedWallet, setSelectedWallet] = useState('');
-  // Single state object for transfer dest to avoid batching issues
   const [transferDest, setTransferDest] = useState({ toWalletId: '', toGoalId: '' });
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date());
@@ -99,7 +100,8 @@ export default function EditTransactionScreen() {
     });
     setAttachmentUri(transaction.receiptUri || null);
     if (transaction.type !== 'transfer') {
-      const cats = transaction.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+      // Search across all categories (including custom) to find the match
+      const cats = transaction.type === 'expense' ? expenseCategories : incomeCategories;
       setSelectedCategory(cats.find(c => c.name === transaction.category) || null);
     }
   }, [transaction]);
@@ -113,7 +115,6 @@ export default function EditTransactionScreen() {
   }
 
   const config = TYPE_CONFIG[type];
-  const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const displayAmount = parseAmountParts(amount);
 
   const isValid = useMemo(() => {
@@ -177,6 +178,7 @@ export default function EditTransactionScreen() {
         amount: type === 'expense' ? -num : num,
         type,
         category: type === 'transfer' ? 'Transfer' : selectedCategory?.name || '',
+        categoryId: type === 'transfer' ? undefined : (selectedCategory?.id ?? undefined),
         date: date.toISOString(),
         hasTime,
         wallet: selectedWallet,
@@ -198,7 +200,6 @@ export default function EditTransactionScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-background"
     >
-      {/* Header */}
       <AppHeader
         title="Edit Transaction"
         onBack={() => navigation.goBack()}
@@ -321,7 +322,7 @@ export default function EditTransactionScreen() {
           {/* Category */}
           {type !== 'transfer' && (
             <CategoryPicker
-              categories={categories}
+              type={type}
               selectedCategory={selectedCategory}
               onSelectCategory={setSelectedCategory}
             />

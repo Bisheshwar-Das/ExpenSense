@@ -5,7 +5,7 @@ import { Transaction } from '../types';
 import { useWallets } from '../contexts/WalletContext';
 import { useGoals } from '../contexts/GoalContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types';
+import { useCategories } from '../contexts/CategoryContext';
 
 interface TransactionRowProps {
   transaction: Transaction;
@@ -16,6 +16,7 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
   const { wallets } = useWallets();
   const { goals } = useGoals();
   const { currency } = useSettings();
+  const { getCategoryById, expenseCategories, incomeCategories } = useCategories();
 
   const now = new Date();
   const yesterday = new Date(now);
@@ -37,7 +38,13 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
     });
   };
 
-  // ── Left side bottom line ───────────────────────────────────────────────
+  // Resolve category — prefer id lookup, fall back to name match, then raw string
+  const resolveCategory = () => {
+    if (transaction.categoryId) return getCategoryById(transaction.categoryId);
+    const cats = transaction.type === 'expense' ? expenseCategories : incomeCategories;
+    return cats.find(c => c.name === transaction.category);
+  };
+
   const getSubtitle = () => {
     if (transaction.type === 'transfer') {
       const toWallet = transaction.toWalletId
@@ -50,7 +57,6 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
     return transaction.wallet;
   };
 
-  // ── Right side bottom label ─────────────────────────────────────────────
   const getRightLabel = () => {
     if (transaction.type === 'transfer') {
       const toGoal = transaction.toGoalId ? goals.find(g => g.id === transaction.toGoalId) : null;
@@ -61,9 +67,7 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
       if (toWallet) return `${toWallet.icon} ${toWallet.name}`;
       return null;
     }
-    // Look up category icon
-    const cats = transaction.type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-    const cat = cats.find(c => c.name === transaction.category);
+    const cat = resolveCategory();
     return cat ? `${cat.icon} ${cat.name}` : transaction.category || null;
   };
 
@@ -73,10 +77,8 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
       : transaction.type === 'transfer'
         ? 'text-primary'
         : 'text-expense';
-
   const amountPrefix =
     transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '⇄ ' : '-';
-
   const rightLabel = getRightLabel();
 
   return (
@@ -91,7 +93,6 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
         elevation: 3,
       }}
     >
-      {/* Left — title, date, from/to or wallet */}
       <View className="flex-1 mr-3">
         <Text className="text-textPrimary font-semibold text-base mb-0.5" numberOfLines={1}>
           {transaction.title}
@@ -101,8 +102,6 @@ export default function TransactionRow({ transaction, onPress }: TransactionRowP
           {getSubtitle()}
         </Text>
       </View>
-
-      {/* Right — amount + category or goal */}
       <View className="items-end">
         <Text className={`text-base font-bold ${amountColor}`}>
           {amountPrefix}

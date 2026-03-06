@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import DrawerMenu from './DrawerMenu';
 
 interface AppHeaderProps {
   title: string;
@@ -15,6 +14,7 @@ interface AppHeaderProps {
   titleAlign?: 'left' | 'center';
   hideMenu?: boolean;
   backgroundColor?: string;
+  rightAction?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -28,12 +28,14 @@ export default function AppHeader({
   titleAlign = 'center',
   hideMenu = false,
   backgroundColor,
+  rightAction,
   children,
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const [menuVisible, setMenuVisible] = useState(false);
 
   const RightSlot = () => {
+    if (rightAction) return <>{rightAction}</>;
     if (onEdit) {
       return (
         <TouchableOpacity onPress={onEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -75,13 +77,15 @@ export default function AppHeader({
           </View>
         ) : (
           <View className="flex-row items-center mb-6">
-            <View className="w-10">
+            {/* Left — fixed min width so title stays centered */}
+            <View style={{ minWidth: 40 }}>
               {onBack && (
                 <TouchableOpacity onPress={onBack} className="bg-white/20 p-2 rounded-xl">
                   <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
                 </TouchableOpacity>
               )}
             </View>
+            {/* Title — flex-1 so it takes remaining space */}
             <View className="flex-1 items-center">
               <Text className="text-white text-2xl font-bold" numberOfLines={1}>
                 {icon && `${icon} `}
@@ -89,15 +93,14 @@ export default function AppHeader({
               </Text>
               {subtitle && <Text className="text-white/80 text-sm mt-0.5">{subtitle}</Text>}
             </View>
-            <View className="w-10 items-end">
+            {/* Right — min width matches left, grows if content is wider */}
+            <View style={{ minWidth: 40, alignItems: 'flex-end' }}>
               <RightSlot />
             </View>
           </View>
         )}
         {children}
       </View>
-
-      {!hideMenu && <DrawerMenu visible={menuVisible} onClose={() => setMenuVisible(false)} />}
     </>
   );
 }

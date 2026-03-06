@@ -3,18 +3,19 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTransactions } from '../contexts/TransactionContext';
-import { useWallets } from '../contexts/WalletContext';
-import { useGoals } from '../contexts/GoalContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { RootNavigationProp, TransactionDetailsRouteProp } from '../navigation/types';
+import { useTransactions } from '../../contexts/TransactionContext';
+import { useWallets } from '../../contexts/WalletContext';
+import { useGoals } from '../../contexts/GoalContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useCategories } from '../../contexts/CategoryContext';
+import { RootNavigationProp, TransactionDetailsRouteProp } from '../../navigation/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppHeader from '@/components/AppHeader';
 
 const TYPE_CONFIG = {
-  expense: { color: '#EF4444', bgClass: 'bg-expense', label: 'Expense', symbol: '−' },
-  income: { color: '#22C55E', bgClass: 'bg-income', label: 'Income', symbol: '+' },
-  transfer: { color: '#14B8A6', bgClass: 'bg-primary', label: 'Transfer', symbol: '⇄' },
+  expense: { color: '#EF4444', label: 'Expense', symbol: '−' },
+  income: { color: '#22C55E', label: 'Income', symbol: '+' },
+  transfer: { color: '#14B8A6', label: 'Transfer', symbol: '⇄' },
 } as const;
 
 export default function TransactionDetailsScreen() {
@@ -24,6 +25,7 @@ export default function TransactionDetailsScreen() {
   const { wallets } = useWallets();
   const { goals } = useGoals();
   const { currency } = useSettings();
+  const { getCategoryById, expenseCategories, incomeCategories } = useCategories();
   const insets = useSafeAreaInsets();
 
   const { transactionId } = route.params;
@@ -51,6 +53,16 @@ export default function TransactionDetailsScreen() {
     ? wallets.find(w => w.id === transaction.toWalletId)
     : null;
   const toGoal = transaction.toGoalId ? goals.find(g => g.id === transaction.toGoalId) : null;
+
+  // Resolve category — id first, then name fallback for old transactions
+  const resolvedCategory = transaction.categoryId
+    ? getCategoryById(transaction.categoryId)
+    : (transaction.type === 'expense' ? expenseCategories : incomeCategories).find(
+        c => c.name === transaction.category
+      );
+  const categoryDisplay = resolvedCategory
+    ? `${resolvedCategory.icon}  ${resolvedCategory.name}`
+    : transaction.category || '—';
 
   const formatDate = (s: string) =>
     new Date(s).toLocaleDateString('en-US', {
@@ -82,7 +94,6 @@ export default function TransactionDetailsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Header */}
       <AppHeader
         title="Details"
         onBack={() => navigation.goBack()}
@@ -95,7 +106,6 @@ export default function TransactionDetailsScreen() {
         backgroundColor={config.color}
       />
 
-      {/* Hero amount */}
       <View style={{ backgroundColor: config.color }}>
         <View className="items-center pb-9 pt-1">
           <Text className="text-white/70 text-sm mb-1">{config.label}</Text>
@@ -105,7 +115,6 @@ export default function TransactionDetailsScreen() {
           </Text>
           <Text className="text-white/65 text-sm mt-2">{transaction.title}</Text>
         </View>
-        {/* Curve */}
         <View className="bg-background rounded-t-3xl" style={{ height: 28 }} />
       </View>
 
@@ -114,7 +123,6 @@ export default function TransactionDetailsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 100 }}
       >
-        {/* Main details card */}
         <View
           className="bg-card rounded-2xl overflow-hidden"
           style={{
@@ -170,7 +178,7 @@ export default function TransactionDetailsScreen() {
           ) : (
             <>
               <Divider />
-              <DetailRow icon="grid-outline" label="Category" value={transaction.category} />
+              <DetailRow icon="grid-outline" label="Category" value={categoryDisplay} />
               <Divider />
               <DetailRow
                 icon="wallet-outline"
@@ -181,7 +189,6 @@ export default function TransactionDetailsScreen() {
           )}
         </View>
 
-        {/* Notes */}
         {transaction.notes ? (
           <View className="mt-3">
             <SectionLabel label="Notes" />
@@ -200,7 +207,6 @@ export default function TransactionDetailsScreen() {
           </View>
         ) : null}
 
-        {/* Attachment */}
         {transaction.receiptUri ? (
           <View className="mt-3">
             <SectionLabel label="Attachment" />
@@ -214,7 +220,6 @@ export default function TransactionDetailsScreen() {
         ) : null}
       </ScrollView>
 
-      {/* Delete button */}
       <View
         className="absolute bottom-0 left-0 right-0 bg-card border-t border-border px-4 pt-3"
         style={{ paddingBottom: insets.bottom + 12 }}
@@ -239,11 +244,9 @@ function SectionLabel({ label }: { label: string }) {
     </Text>
   );
 }
-
 function Divider() {
   return <View className="h-px bg-border mx-4" />;
 }
-
 function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 13 }}>
